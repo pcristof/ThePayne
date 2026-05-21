@@ -5,7 +5,7 @@ import numpy as np
 import sys
 
 runspec = True
-runphot = True
+runphot = False
 runmock = False
 
 # startorun = 'Sun'
