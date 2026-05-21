@@ -93,7 +93,7 @@ class TrainMod(object):
           else:
                self.batchsize = self.numtrain
 
-          # number of nuerons in each layer
+          # number of neurons in each layer
           if 'H1' in kwargs:
                self.H1 = kwargs['H1']
           else:
@@ -170,7 +170,7 @@ class TrainMod(object):
                self.numtest,
                resolution=self.resolution, 
                waverange=self.waverange,
-               MISTweighting=True,
+               MISTweighting=False,
                dividecont=self.dividecont,
                Teff=self.teffrange,
                logg=self.loggrange,
@@ -363,7 +363,7 @@ class TrainMod(object):
                     self.numtrain,
                     resolution=self.resolution, 
                     waverange=self.waverange,
-                    MISTweighting=True,
+                    MISTweighting=False,
                     dividecont=self.dividecont,
                     Teff=self.teffrange,
                     logg=self.loggrange,
@@ -372,7 +372,7 @@ class TrainMod(object):
                     vtrub=self.vtrange,
                     excludelabels=np.array(self.testlabels),
                     )
-
+               
                # create tensor for input training labels
                X_train_labels = labels_train[:,:len(self.label_i)]
                X_train_Tensor = Variable(torch.from_numpy(X_train_labels).type(dtype))
@@ -387,7 +387,7 @@ class TrainMod(object):
                     self.numtrain,
                     resolution=self.resolution, 
                     waverange=self.waverange,
-                    MISTweighting=True,
+                    MISTweighting=False,
                     dividecont=self.dividecont,               
                     Teff=self.teffrange,
                     logg=self.loggrange,
@@ -404,7 +404,7 @@ class TrainMod(object):
                # create tensor of output validation labels
                Y_valid = np.array(spectra_valid)
                Y_valid_Tensor = Variable(torch.from_numpy(Y_valid).type(dtype), requires_grad=False)
-               Y_valid_Tensor = Y_valid_Tensor.to(device)
+               Y_valid_Tensor = Y_valid_Tensor.to(device)               
 
                print('... Finished reading in models ({})'.format(datetime.now() - startreadintrainmod))
 
