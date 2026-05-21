@@ -15,23 +15,166 @@ import Payne
 from .smoothing import smoothspec
 
 class readc3k(object):
+    # def __init__(self,**kwargs):
+    #     # define aliases for the MIST isochrones and C3K/CKC files
+    #     self.MISTpath = kwargs.get('MISTpath',Payne.__abspath__+'data/MIST/MIST_1.2_EEPtrk.h5')
+    #     self.C3Kpath  = kwargs.get('C3Kpath',Payne.__abspath__+'data/C3K/')
+
+    #     if self.MISTpath is None:
+    #         self.MISTpath = Payne.__abspath__+'data/MIST/MIST_1.2_EEPtrk.h5'
+
+    #     if self.C3Kpath is None:
+    #         self.C3Kpath = Payne.__abspath__+'data/C3K/'
+
+    #     from IPython import embed;embed()
+
+
+    #     # load MIST models
+    #     # self.MIST = h5py.File(self.MISTpath,'r')
+    #     # self.MISTindex = list(self.MIST['index'])
+    #     # convert btye strings to python strings
+    #     # self.MISTindex = [x.decode("utf-8") for x in self.MISTindex]
+
+    #     # determine the FeH and aFe arrays for C3K
+    #     self.FeHarr = []
+    #     self.alphaarr = []
+    #     self.vtarr = []
+    #     for indinf in glob.glob(self.C3Kpath+'c3k*h5'):
+    #         feh_i =  float(indinf.partition('feh')[-1][:5])
+    #         afe_i =  float(indinf.partition('afe')[-1][:4])
+    #         self.FeHarr.append(feh_i)
+    #         self.alphaarr.append(afe_i)
+    #         if 'vmic' in indinf:
+    #             vt_i = float(indinf.partition('vmic')[-1][:3])/10.0
+    #             self.vtarr.append(vt_i)
+    #     self.FeHarr = np.unique(self.FeHarr)
+    #     self.alphaarr = np.unique(self.alphaarr)
+
+    #     vtfixbool = kwargs.get('vtfixed',False)
+    #     if vtfixbool:
+    #         if len(self.vtarr) > 0:
+    #             self.vtarr = [1.0]
+    #     else:
+    #         self.vtarr = np.unique(self.vtarr)
+
+    #     self.verbose = kwargs.get('verbose',False)
+
+    #     if self.verbose:
+    #         print('FOUND {} FeH'.format(len(self.FeHarr)))
+    #         print('FOUND {} aFe'.format(len(self.alphaarr)))
+    #         print('FOUND {} Vt'.format(len(self.vtarr)))
+
+    #     # remove the super metal-rich models that only have aFe = 0
+    #     # if 0.75 in self.FeHarr:
+    #     # 	self.FeHarr.remove(0.75)
+    #     # if 1.00 in self.FeHarr:
+    #     # 	self.FeHarr.remove(1.00)
+    #     # if 1.25 in self.FeHarr:
+    #     # 	self.FeHarr.remove(1.25)
+    #     self.FeHarr = self.FeHarr[self.FeHarr <= 0.5]
+
+    #     # determine the MIST FeH and aFe arrays
+    #     # self.MISTFeHarr = []
+    #     # self.MISTalphaarr = []
+    #     # for indinf in self.MISTindex:
+    #     #     self.MISTFeHarr.append(float(indinf.split('/')[0]))
+    #     #     self.MISTalphaarr.append(float(indinf.split('/')[1]))
+
+    #     # create weights for Teff
+    #     # determine the min/max Teff from MIST
+    #     # self.MISTTeffmin = np.inf
+    #     # self.MISTTeffmax = -np.inf
+    #     # for ind in self.MISTindex:
+    #     #     MISTTeffmin_i = self.MIST[ind]['log_Teff'].min()
+    #     #     MISTTeffmax_i = self.MIST[ind]['log_Teff'].max()
+    #     #     if MISTTeffmin_i < self.MISTTeffmin:
+    #     #         self.MISTTeffmin = MISTTeffmin_i
+    #     #     if MISTTeffmax_i > self.MISTTeffmax:
+    #     #         self.MISTTeffmax = MISTTeffmax_i
+
+    #     self.teffwgts = {}
+    #     # for ind in self.MISTindex:
+    #     #     self.teffwgts[ind] = beta(0.2,1.5,
+    #     #         loc=self.MISTTeffmin-0.1,
+    #     #         scale=(self.MISTTeffmax+0.1)-(self.MISTTeffmin-0.1)
+    #     #         ).pdf(self.MIST[ind]['log_Teff'])
+    #     #     self.teffwgts[ind] = self.teffwgts[ind]/np.sum(self.teffwgts[ind])
+    #     # self.teffwgts = beta(0.5,1.0,loc=self.MISTTeffmin-0.1,scale=(self.MISTTeffmax+0.1)-(self.MISTTeffmin-0.1))
+
+    #     # create weights for [Fe/H]
+    #     self.fehwgts = beta(1.0,1.0,loc=-4.1,scale=4.7).pdf(self.FeHarr)
+    #     self.fehwgts = self.fehwgts/np.sum(self.fehwgts)
+            
+    #     # create a dictionary for the C3K models and populate it for different
+    #     # metallicities
+    #     self.C3K = {}
+    #     for aa in self.alphaarr:
+    #         self.C3K[aa] = {}
+    #         for mm in self.FeHarr:
+    #             if len(self.vtarr) == 0:
+    #                 # glob file name to see if feh/afe file is in c3kpath
+    #                 fnamelist = glob.glob(self.C3Kpath+'c3k*feh{0:+4.2f}_afe{1:+3.1f}.*.h5'.format(mm,aa))
+    #                 if len(fnamelist) == 1:
+    #                     fname = fnamelist[0]
+    #                 else:
+    #                     raise IOError('Could not find suitable C3K file: FeH={0}. aFe={1}'.format(mm,aa))
+    #                 self.C3K[aa][mm] = h5py.File(
+    #                     fname,
+    #                     'r', libver='latest', swmr=True)
+    #             else:
+    #                 self.C3K[aa][mm] = {}
+    #                 for vv in self.vtarr:
+    #                     # glob file name to see if feh/afe file is in c3kpath
+    #                     fnamelist = glob.glob(self.C3Kpath+'c3k*feh{0:+4.2f}*afe{1:+3.1f}*vt{2:02.0f}*h5'.format(mm,aa,vv*10))
+    #                     if len(fnamelist) == 1:
+    #                         fname = fnamelist[0]
+    #                     else:
+    #                         raise IOError('Could not find suitable C3K file: FeH={0}. aFe={1} vt={2}'.format(mm,aa,vv))
+    #                     print(fname)
+    #                     self.C3K[aa][mm][vv] = h5py.File(
+    #                         fname,
+    #                         'r', libver='latest', swmr=True)
+    #                     # # add vtrub to parameter labels
+    #                     # pars_i = self.C3K[aa][mm][vv]['parameters'][:]
+    #                     # pars = np.lib.recfunctions.rec_append_fields(pars_i,'vt',x,dtypes=float)
+    #                     # self.C3K[aa][mm][vv]['parameters'] = pars
+
+    #     # create min-max dictionary for input labels
+    #     if len(self.vtarr) == 0:
+    #         self.minmax = ({
+    #             'teff': [2500.0,10000.0],
+    #             'logg': [-1,5.5],
+    #             'feh':  [-4.0,0.5],
+    #             'afe':  [-0.2,0.6],
+    #             })
+    #     else:
+    #         self.minmax = ({
+    #             'teff': [2500.0,10000.0],
+    #             'logg': [-1,5.5],
+    #             'feh':  [-4.0,0.5],
+    #             'afe':  [-0.2,0.6],
+    #             'vturb':[0.5,3.0],
+    #             })
+
+
+    #     # create min-max for spectra
+    #     self.Fminmax = [0.0,1.0]
+
+    #     # init random number object
+    #     self.rng = np.random.default_rng()
+
     def __init__(self,**kwargs):
         # define aliases for the MIST isochrones and C3K/CKC files
         self.MISTpath = kwargs.get('MISTpath',Payne.__abspath__+'data/MIST/MIST_1.2_EEPtrk.h5')
         self.C3Kpath  = kwargs.get('C3Kpath',Payne.__abspath__+'data/C3K/')
 
+        ## To potentially delete
         if self.MISTpath is None:
             self.MISTpath = Payne.__abspath__+'data/MIST/MIST_1.2_EEPtrk.h5'
 
         if self.C3Kpath is None:
             self.C3Kpath = Payne.__abspath__+'data/C3K/'
-
-        # load MIST models
-        self.MIST = h5py.File(self.MISTpath,'r')
-        self.MISTindex = list(self.MIST['index'])
-        # convert btye strings to python strings
-        self.MISTindex = [x.decode("utf-8") for x in self.MISTindex]
-
+        
         # determine the FeH and aFe arrays for C3K
         self.FeHarr = []
         self.alphaarr = []
@@ -41,8 +184,8 @@ class readc3k(object):
             afe_i =  float(indinf.partition('afe')[-1][:4])
             self.FeHarr.append(feh_i)
             self.alphaarr.append(afe_i)
-            if 'vt' in indinf:
-                vt_i = float(indinf.partition('vt')[-1][:3])/10.0
+            if 'vmic' in indinf:
+                vt_i = float(indinf.partition('vmic')[-1][:4])
                 self.vtarr.append(vt_i)
         self.FeHarr = np.unique(self.FeHarr)
         self.alphaarr = np.unique(self.alphaarr)
@@ -71,31 +214,31 @@ class readc3k(object):
         self.FeHarr = self.FeHarr[self.FeHarr <= 0.5]
 
         # determine the MIST FeH and aFe arrays
-        self.MISTFeHarr = []
-        self.MISTalphaarr = []
-        for indinf in self.MISTindex:
-            self.MISTFeHarr.append(float(indinf.split('/')[0]))
-            self.MISTalphaarr.append(float(indinf.split('/')[1]))
+        # self.MISTFeHarr = []
+        # self.MISTalphaarr = []
+        # for indinf in self.MISTindex:
+        #     self.MISTFeHarr.append(float(indinf.split('/')[0]))
+        #     self.MISTalphaarr.append(float(indinf.split('/')[1]))
 
         # create weights for Teff
         # determine the min/max Teff from MIST
-        self.MISTTeffmin = np.inf
-        self.MISTTeffmax = -np.inf
-        for ind in self.MISTindex:
-            MISTTeffmin_i = self.MIST[ind]['log_Teff'].min()
-            MISTTeffmax_i = self.MIST[ind]['log_Teff'].max()
-            if MISTTeffmin_i < self.MISTTeffmin:
-                self.MISTTeffmin = MISTTeffmin_i
-            if MISTTeffmax_i > self.MISTTeffmax:
-                self.MISTTeffmax = MISTTeffmax_i
+        # self.MISTTeffmin = np.inf
+        # self.MISTTeffmax = -np.inf
+        # for ind in self.MISTindex:
+        #     MISTTeffmin_i = self.MIST[ind]['log_Teff'].min()
+        #     MISTTeffmax_i = self.MIST[ind]['log_Teff'].max()
+        #     if MISTTeffmin_i < self.MISTTeffmin:
+        #         self.MISTTeffmin = MISTTeffmin_i
+        #     if MISTTeffmax_i > self.MISTTeffmax:
+        #         self.MISTTeffmax = MISTTeffmax_i
 
         self.teffwgts = {}
-        for ind in self.MISTindex:
-            self.teffwgts[ind] = beta(0.2,1.5,
-                loc=self.MISTTeffmin-0.1,
-                scale=(self.MISTTeffmax+0.1)-(self.MISTTeffmin-0.1)
-                ).pdf(self.MIST[ind]['log_Teff'])
-            self.teffwgts[ind] = self.teffwgts[ind]/np.sum(self.teffwgts[ind])
+        # for ind in self.MISTindex:
+        #     self.teffwgts[ind] = beta(0.2,1.5,
+        #         loc=self.MISTTeffmin-0.1,
+        #         scale=(self.MISTTeffmax+0.1)-(self.MISTTeffmin-0.1)
+        #         ).pdf(self.MIST[ind]['log_Teff'])
+        #     self.teffwgts[ind] = self.teffwgts[ind]/np.sum(self.teffwgts[ind])
         # self.teffwgts = beta(0.5,1.0,loc=self.MISTTeffmin-0.1,scale=(self.MISTTeffmax+0.1)-(self.MISTTeffmin-0.1))
 
         # create weights for [Fe/H]
@@ -110,6 +253,7 @@ class readc3k(object):
             for mm in self.FeHarr:
                 if len(self.vtarr) == 0:
                     # glob file name to see if feh/afe file is in c3kpath
+                    # fnamelist = glob.glob(self.C3Kpath+'c3k*feh{0:+4.2f}_afe{1:+3.1f}.*.h5'.format(mm,aa))
                     fnamelist = glob.glob(self.C3Kpath+'c3k*feh{0:+4.2f}_afe{1:+3.1f}.*.h5'.format(mm,aa))
                     if len(fnamelist) == 1:
                         fname = fnamelist[0]
@@ -122,7 +266,7 @@ class readc3k(object):
                     self.C3K[aa][mm] = {}
                     for vv in self.vtarr:
                         # glob file name to see if feh/afe file is in c3kpath
-                        fnamelist = glob.glob(self.C3Kpath+'c3k*feh{0:+4.2f}*afe{1:+3.1f}*vt{2:02.0f}*h5'.format(mm,aa,vv*10))
+                        fnamelist = glob.glob(self.C3Kpath+'c3k*feh{0:+4.2f}*afe{1:+3.1f}*vmic{2:+3.1f}*h5'.format(mm,aa,vv))
                         if len(fnamelist) == 1:
                             fname = fnamelist[0]
                         else:
@@ -256,12 +400,320 @@ class readc3k(object):
         if continuuabool:
             continuua = []
 
-        for ii in range(num):
+        ## PIC: This just seems like the very wrong way to randomly selec
+        ## labels from a parameter space while avoiding duplicates.
+        ## If we want to avoid duplicates, it might better to create a list of
+        ## all parameters and randomly select a line in this list.
+
+        ## The old code was: 
+        ##      1- picking random Teff / logg
+        ##      2- Doing a nearest interpolator to choose the point in the grid
+        ## We can just choose a random index and pick the line in the grid...
+        
+        ## So here is my implementation:
+        ## Get a list of all possible values for the parameters:
+        ## - Go through FeHs
+        list_of_params = []
+        for _feh in self.FeHarr:
+            for _afe in self.alphaarr:
+                if len(self.vtarr) > 0:
+                    for vt in self.vtarr:
+                        # For these values
+                        C3K_i = self.C3K[_afe][_feh][vt]
+                        # create array of all labels in specific C3K file
+                        C3Kpars = list(C3K_i['parameters'])
+                        list_of_params.append(C3Kpars)
+                else:
+                    C3K_i = self.C3K[_afe][_feh]
+                    # create array of all labels in specific C3K file
+                    C3Kpars = list(C3K_i['parameters'])
+                    list_of_params.append(C3Kpars)
+        
+        # list_of_params = np.concatenate(list_of_params, axis=0)
+        full_list_of_params = []
+        for l in range(len(list_of_params)):
+            for e in range(len(list_of_params[l])):
+                full_list_of_params.append(list_of_params[l][e])
+        list_of_params = full_list_of_params
+
+        # for ii in range(num):
+        ii = 0
+        while ii < num:
+            print(f'Progress: {ii}/{num}', end='\r')
             if self.verbose:
                 print(f'... {ii+1}')
                 starttime = datetime.now()
 
+            ## Pick a random set of parameters
+            params = self.rng.choice(list_of_params)
+            label_i = list(params)
+            params_arr = np.array(label_i)
+            list_of_params.remove(params)
+
+            if len(self.vtarr) > 0:
+                T, L, FeH_i, alpha_i, vt_i = params_arr
+                FeH_i = round(float(FeH_i),2)
+                alpha_i = round(float(alpha_i),2)
+                vt_i = round(float(vt_i),2)
+                T = 10**round(float(T), 2)
+                L = round(float(L), 2)
+            else:
+                T, L, FeH_i, alpha_i = params
+                FeH_i = round(float(FeH_i),2)
+                alpha_i = round(float(alpha_i),2)
+                T = round(10**float(T))
+                L = round(float(L), 2)
+            ## Print warnings if the values are out of bounds        
+            if (FeH_i >= fehrange[0]) & (FeH_i <= fehrange[1]): pass
+            else: print('ISSUE - FeH OUT OF BOUNDS')
+            if (alpha_i >= aFerange[0]) & (alpha_i <= aFerange[1]): pass
+            else: print('ISSUE - ALPHA OUT OF BOUNDS')
+            ## Pick a random vt:
+            if len(self.vtarr) > 0:
+                if (vt_i >= vtrange[0]) & (vt_i <= vtrange[1]): pass
+                else: print('ISSUE - vt_i OUT OF RANGE')
+
+            ## Now we need to grab the corresponding spectra:
+            if len(self.vtarr) > 0:
+                # For these values
+                C3K_i = self.C3K[alpha_i][FeH_i][vt_i]
+                # create array of all labels in specific C3K file
+                C3Kpars = np.array(C3K_i['parameters'])
+            else:
+                C3K_i = self.C3K[alpha_i][FeH_i]
+                # create array of all labels in specific C3K file
+                C3Kpars = np.array(C3K_i['parameters'])    
+
+            C3Kpars['logt'] = 10.0**C3Kpars['logt']
+            C3Kpars = rfn.rename_fields(C3Kpars,{'logt':'teff'})
+
+            # do a nearest neighbor interpolation on Teff and log(g) in the C3K grid
+            C3KNN = NearestNDInterpolator(
+                np.array([C3Kpars['teff'],C3Kpars['logg']]).T,range(0,len(C3Kpars))
+                )((T, L))
+            C3KNN = int(C3KNN)
+
+            # determine the labels for the selected C3K spectrum
+            try:
+                label_i = list(C3Kpars[C3KNN])
+            except IndexError:
+                print(C3KNN)
+                raise
+
+            # check to see if user defined labels to exclude, if so
+            # continue on to the next iteration
+            if label_i in excludelabels:
+                print('Found spectrum in exclude labels')
+                continue
+
+            # turn off warnings for this step, C3K has some continuaa with flux = 0
+            if dividecont:
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    spectra_i = C3K_i['spectra'][C3KNN]/C3K_i['continuua'][C3KNN]
+            else:
+                spectra_i = C3K_i['spectra'][C3KNN]/np.nanmedian(C3K_i['spectra'][C3KNN])
+
+            if continuuabool:
+                continuua_i = C3K_i['continuua'][C3KNN]
+            else:
+                continuua_i = None
+
+            # if self.verbose:
+                # print('Create C3K spectra in {0}'.format(datetime.now()-starttime))
+
+            # check to see if label_i in labels
+            # if so, then skip the append and go to next step in while loop
+            # do this before the smoothing to reduce run time
+            if (label_i in labels): ## This should no longer ever happen
+                print('label_i in labels')
+                print(label_i)
+                continue
+
+            # check to see if spectrum has nan's, if so remove them as 
+            # long as they are < 0.1% of the total number of pixels
+            if (np.isfinite(spectra_i).sum() != len(spectra_i)):
+                print(f'Found {np.isnan(spectra_i).sum()} NaN out of {len(spectra_i)}')
+                print(label_i)
+                continue
+
+
+            # store a wavelength array as an instance, all of C3K has 
+            # the same wavelength sampling
+            if wavelength_o_flag:
+                wavelength_o = [] # initialize the output wavelength array
+                wavelength_o_flag = False # turn off this step for all subsequent models
+                wavelength_i = np.array(C3K_i['wavelengths'])
+                if resolution != None:
+                    # define new wavelength array with 3*resolution element sampling
+                    i = 1
+                    while True:
+                        wave_i = waverange[0]*(1.0 + 1.0/(3.0*resolution))**(i-1.0)
+                        if wave_i <= waverange[1]:
+                            wavelength_o.append(wave_i)
+                            i += 1
+                        else:
+                            break
+                    wavelength_o = np.array(wavelength_o)
+                else:
+                    wavecond = (wavelength_i >= waverange[0]) & (wavelength_i <= waverange[1])
+                    wavecond = np.array(wavecond,dtype=bool)
+                    wavelength_o = wavelength_i[wavecond]
+
+            # if self.verbose:
+            # 	print('Saved a C3K wavelength instance in {0}'.format(datetime.now()-starttime))
+
+            # if user defined resolution to train at, the smooth C3K to that resolution
+            if resolution != None:
+                spectra_i = self.smoothspecfunc(wavelength_i,spectra_i,resolution,
+                    outwave=wavelength_o,smoothtype='R',fftsmooth=True)
+            else:
+                spectra_i = spectra_i[wavecond]
+
+            if continuuabool:
+                if resolution != None:
+                    continuua_i = self.smoothspecfunc(wavelength_i,continuua_i,resolution,
+                        outwave=wavelength_o,smoothtype='R',fftsmooth=True)
+                else:
+                    continuua_i = continuua_i[wavecond]
+
+
+            # if self.verbose:
+            # 	print('Convolve C3K to new R in {0}'.format(datetime.now()-starttime))
+
+            labels.append(label_i)
+            spectra.append(spectra_i)
+
+            # if requested, return continuua
+            if continuuabool:
+                continuua.append(continuua_i)
+
+            # if requested, record random selected parameters
+            if reclabelsel:
+                if len(self.vtarr) > 0:
+                    initlabels.append([T,L,FeH_i,alpha_i,vt_i])
+                else:
+                    initlabels.append([T,L,FeH_i,alpha_i])
+            # print('Breaking loop')
+            # break
+            if self.verbose:
+                print(f'-> Added {ii+1}, total time: {0}'.format(datetime.now()-starttime))
+            ## Increase iterator
+            ii+=1
+        output = [np.array(spectra), np.array(labels),wavelength_o]
+        if reclabelsel:
+            output += [np.array(initlabels)]
+        if continuuabool:
+            output += [np.array(continuua)]
+
+        return output
+
+
+    def pullspectra_old(self,num,**kwargs):
+        '''
+        Randomly draw num spectra from C3K with option to 
+        base draw on the MIST isochrones.
+        
+        :params num:
+            Number of spectra randomly drawn 
+
+        :params label (optional):
+            kwarg defined as labelname=[min, max]
+            This constrains the spectra to only 
+            be drawn from a given range of labels
+
+        :params excludelabels (optional):
+            kwarg defined as array of labels
+            that should not be included in 
+            output sample of spectra. Useful 
+            for when defining validation and 
+            testing spectra
+
+        : params waverange (optional):
+            kwarg used to set wavelength range
+            of output spectra
+        
+        : params reclabelsel (optional):
+            kwarg boolean that returns arrays that 
+            give how the labels were selected
+
+        : params returncontinuua (optional):
+            kwarg boolean that returns contiunuua in 
+            addition to the normalized spectra
+
+        : returns spectra:
+            Structured array: wave, spectra1, spectra2, spectra3, ...
+            where spectrai is a flux array for ith spectrum. wave is the
+            wavelength array in nm.
+
+        : returns labels:
+            Array of labels for the individual drawn spectra
+
+        : returns wavelenths:
+            Array of wavelengths for predicted spectra
+
+        '''
+
+        Teffrange = kwargs.get('Teff',None)
+        if Teffrange is None:
+            Teffrange = [2500.0,15000.0]
+
+        loggrange = kwargs.get('logg',None)
+        if loggrange is None:
+            loggrange = [-1.0,5.0]
+
+        fehrange = kwargs.get('FeH',None)
+        if fehrange is None:
+            fehrange = [-4.0,0.5]
+
+        aFerange = kwargs.get('aFe',None)
+        if aFerange is None:
+            aFerange = [-0.2,0.6]
+
+        vtrange = kwargs.get('vturb',None)
+        if vtrange is None:
+            vtrange = [0.5,3.0]
+
+        if 'resolution' in kwargs:
+            resolution = kwargs['resolution']
+        else:
+            resolution = None
+
+        if 'excludelabels' in kwargs:
+            excludelabels = kwargs['excludelabels'].T.tolist()
+        else:
+            excludelabels = []
+
+        # default is just the MgB triplet 
+        waverange = kwargs.get('waverange',[5150.0,5300.0])
+
+        # set up some booleans
+        dividecont    = kwargs.get('dividecont',True)
+        reclabelsel   = kwargs.get('reclabelsel',False)
+        continuuabool = kwargs.get('returncontinuua',False)
+        MISTweighting = kwargs.get('MISTweighting',False)
+        # timeit        = kwargs.get('timeit',False)
+
+        # randomly select num number of MIST isochrone grid points, currently only 
+        # using dwarfs, subgiants, and giants (EEP = 200-808)
+
+        labels = []
+        spectra = []
+        wavelength_o_flag = True
+        if reclabelsel:
+            initlabels = []
+        if continuuabool:
+            continuua = []
+
+        for ii in range(num):
+            print(f'Progress: {ii}/{num}', end='\r')
+            if self.verbose:
+                print(f'... {ii+1}')
+                starttime = datetime.now()
+
+            _i = 0
             while True:
+                _j = 0
+                print(_i)
                 # first randomly draw a [Fe/H]
                 while True:
                     if MISTweighting:
@@ -274,6 +726,8 @@ class readc3k(object):
                     # [Fe/H] limits
                     if (FeH_i >= fehrange[0]) & (FeH_i <= fehrange[1]):
                         break
+                    else:
+                        print('ISSUE - FeH OUT OF BOUNDS')
                 # if self.verbose:
                 # 	print('Pulled random [Fe/H] in {0}'.format(datetime.now()-starttime))
 
@@ -285,6 +739,8 @@ class readc3k(object):
                     # [alpha/Fe] limits
                     if (alpha_i >= aFerange[0]) & (alpha_i <= aFerange[1]):
                         break
+                    else:
+                        print('ISSUE - ALPHA OUT OF BOUNDS')
                 # if self.verbose:
                 # 	print('Pulled random [a/Fe] in {0}'.format(datetime.now()-starttime))
 
@@ -297,6 +753,8 @@ class readc3k(object):
                         # vturb limits
                         if (vt_i >= vtrange[0]) & (vt_i <= vtrange[1]):
                             break
+                        else:
+                            print('ISSUE - vt_i OUT OF RANGE')
                     # if self.verbose:
                     # 	print('Pulled random vturb in {0}'.format(datetime.now()-starttime))				
 
@@ -325,9 +783,9 @@ class readc3k(object):
 
                 # select the range of MIST models with that [Fe/H]
                 # first determine the FeH and aFe that are nearest to MIST values
-                FeH_i_MIST = self.MISTFeHarr[np.argmin(np.abs(FeH_i-self.MISTFeHarr))]
-                aFe_i_MIST = self.MISTalphaarr[np.argmin(np.abs(alpha_i-self.MISTalphaarr))]
-                MIST_i = self.MIST['{0:4.2f}/{1:4.2f}/0.40'.format(FeH_i_MIST,aFe_i_MIST)]
+                # FeH_i_MIST = self.MISTFeHarr[np.argmin(np.abs(FeH_i-self.MISTFeHarr))]
+                # aFe_i_MIST = self.MISTalphaarr[np.argmin(np.abs(alpha_i-self.MISTalphaarr))]
+                # MIST_i = self.MIST['{0:4.2f}/{1:4.2f}/0.40'.format(FeH_i_MIST,aFe_i_MIST)]
 
                 # if self.verbose:
                 # 	print('Pulled MIST models in {0}'.format(datetime.now()-starttime))
@@ -343,21 +801,21 @@ class readc3k(object):
                 # if self.verbose:
                 # 	print('Created MIST weighting {0}'.format(datetime.now()-starttime))
 
-                while True:
-                    # randomly select a EEP, log(age) combination with weighting 
-                    # towards the hotter temps if user wants
-                    MISTsel = self.rng.choice(len(MIST_i),p=teffwgts_i)
+                # while True:
+                #     # randomly select a EEP, log(age) combination with weighting 
+                #     # towards the hotter temps if user wants
+                #     MISTsel = self.rng.choice(len(MIST_i),p=teffwgts_i)
 
-                    # get MIST Teff and log(g) for this selection
-                    logt_MIST_i,logg_MIST_i = MIST_i[MISTsel]['log_Teff'], MIST_i[MISTsel]['log_g']
+                #     # get MIST Teff and log(g) for this selection
+                #     logt_MIST_i,logg_MIST_i = MIST_i[MISTsel]['log_Teff'], MIST_i[MISTsel]['log_g']
 
-                    # check to make sure MIST log(g) and log(Teff) have a spectrum in the C3K grid
-                    # if not draw again
-                    if (
-                        (logt_MIST_i >= np.log10(Teffrange[0])) and (logt_MIST_i <= np.log10(Teffrange[1])) and
-                        (logg_MIST_i >= loggrange[0]) and (logg_MIST_i <= loggrange[1])
-                        ):
-                        break
+                #     # check to make sure MIST log(g) and log(Teff) have a spectrum in the C3K grid
+                #     # if not draw again
+                #     if (
+                #         (logt_MIST_i >= np.log10(Teffrange[0])) and (logt_MIST_i <= np.log10(Teffrange[1])) and
+                #         (logg_MIST_i >= loggrange[0]) and (logg_MIST_i <= loggrange[1])
+                #         ):
+                #         break
                 # if self.verbose:
                 # 	print('Selected MIST pars in {0}'.format(datetime.now()-starttime))
 
@@ -368,27 +826,33 @@ class readc3k(object):
                 randomg = self.rng.standard_normal()*0.5
 
                 # check to see if randomT is an issue for log10
-                if 10.0**logt_MIST_i + randomT <= 0.0:
-                    randomT = np.abs(randomT)
+                # if 10.0**logt_MIST_i + randomT <= 0.0:
+                #     randomT = np.abs(randomT)
                     
-                with warnings.catch_warnings():
-                    warnings.filterwarnings('error')
-                    try:
-                        logt_MIST = np.log10(10.0**logt_MIST_i + randomT)				
-                        logg_MIST = logg_MIST_i + randomg
-                    except Warning:
-                        print(
-                            'Caught a MIST parameter that does not make sense: {0} {1} {2} {3}'.format(
-                                randomT,10.0**logt_MIST_i,randomg,logg_MIST_i))
-                        logt_MIST = logt_MIST_i
-                        logg_MIST = logg_MIST_i
+                # with warnings.catch_warnings():
+                #     warnings.filterwarnings('error')
+                #     try:
+                #         logt_MIST = np.log10(10.0**logt_MIST_i + randomT)				
+                #         logg_MIST = logg_MIST_i + randomg
+                #     except Warning:
+                #         print(
+                #             'Caught a MIST parameter that does not make sense: {0} {1} {2} {3}'.format(
+                #                 randomT,10.0**logt_MIST_i,randomg,logg_MIST_i))
+                #         logt_MIST = logt_MIST_i
+                #         logg_MIST = logg_MIST_i
+
+
+                ## PIC: Randomly select a temperature a logg:
+                T = np.random.random()*5000+3000
+                L = np.random.random()*6-1
+                T+=randomT
+                L+=randomg
 
                 # do a nearest neighbor interpolation on Teff and log(g) in the C3K grid
                 C3KNN = NearestNDInterpolator(
                     np.array([C3Kpars['teff'],C3Kpars['logg']]).T,range(0,len(C3Kpars))
-                    )((10.0**logt_MIST,logg_MIST))
+                    )((T, L))
                 C3KNN = int(C3KNN)
-
 
                 # determine the labels for the selected C3K spectrum
                 try:
@@ -425,6 +889,8 @@ class readc3k(object):
                 # if so, then skip the append and go to next step in while loop
                 # do this before the smoothing to reduce run time
                 if (label_i in labels):
+                    print('label_i in labels')
+                    print(label_i)
                     continue
 
                 # check to see if spectrum has nan's, if so remove them as 
@@ -487,12 +953,16 @@ class readc3k(object):
                 # if requested, record random selected parameters
                 if reclabelsel:
                     if len(self.vtarr) > 0:
-                        initlabels.append([10.0**logt_MIST,logg_MIST,FeH_i,alpha_i,vt_i])
+                        initlabels.append([T,L,FeH_i,alpha_i,vt_i])
                     else:
-                        initlabels.append([10.0**logt_MIST,logg_MIST,FeH_i,alpha_i])
+                        initlabels.append([T,L,FeH_i,alpha_i])
+                print('Breaking loop')
                 break
             if self.verbose:
                 print(f'-> Added {ii+1}, total time: {0}'.format(datetime.now()-starttime))
+
+                #### ------------------------------------------------------------ ####
+                #### ------------------------------------------------------------ ####
 
         output = [np.array(spectra), np.array(labels),wavelength_o]
         if reclabelsel:
@@ -501,7 +971,6 @@ class readc3k(object):
             output += [np.array(continuua)]
 
         return output
-
 
     def selspectra(self,inlabels,**kwargs):
         '''
@@ -791,4 +1260,7 @@ class readc3k(object):
 
     def smoothspecfunc(self,wave, spec, sigma, outwave=None, **kwargs):
         outspec = smoothspec(wave, spec, sigma, outwave=outwave, **kwargs)
+        ## I find this really dumb, but this function is not simply bypassed
+        ## Will potentially revise this in the future
+        # from IPython import embed;embed()
         return outspec
