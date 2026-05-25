@@ -506,12 +506,16 @@ class readc3k(object):
                 print('Found spectrum in exclude labels')
                 continue
 
-            # turn off warnings for this step, C3K has some continuaa with flux = 0
-            if dividecont:
-                with np.errstate(divide='ignore', invalid='ignore'):
-                    spectra_i = C3K_i['spectra'][C3KNN]/C3K_i['continuua'][C3KNN]
-            else:
-                spectra_i = C3K_i['spectra'][C3KNN]/np.nanmedian(C3K_i['spectra'][C3KNN])
+            ## PIC: Aaaaand here we are. This is probably making a lot of sense
+            ## for flux but may not make a lot of sense for out normlized spectra
+            ##
+            # # turn off warnings for this step, C3K has some continuaa with flux = 0
+            # if dividecont:
+            #     with np.errstate(divide='ignore', invalid='ignore'):
+            #         spectra_i = C3K_i['spectra'][C3KNN]/C3K_i['continuua'][C3KNN]
+            # else:
+            #     spectra_i = C3K_i['spectra'][C3KNN]/np.nanmedian(C3K_i['spectra'][C3KNN])
+            spectra_i = C3K_i['spectra'][C3KNN]
 
             if continuuabool:
                 continuua_i = C3K_i['continuua'][C3KNN]
@@ -600,6 +604,7 @@ class readc3k(object):
             ## Increase iterator
             ii+=1
         output = [np.array(spectra), np.array(labels),wavelength_o]
+
         if reclabelsel:
             output += [np.array(initlabels)]
         if continuuabool:

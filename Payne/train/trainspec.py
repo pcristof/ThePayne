@@ -119,7 +119,10 @@ class TrainMod(object):
 
           resolution_fwhm = kwargs.get('resolution',32000.0)
           # convert resolution to sigma
-          self.resolution = resolution_fwhm * fwhm_to_sigma
+          if resolution_fwhm is not None:
+               self.resolution = resolution_fwhm * fwhm_to_sigma
+          else:
+               self.resolution = None
 
           self.waverange  = kwargs.get('waverange',[5150.0,5300.0])
 
@@ -166,6 +169,8 @@ class TrainMod(object):
           sys.stdout.flush()
           self.c3kmods = readc3k(MISTpath=self.mistpath,C3Kpath=self.c3kpath,vtfixed=vtfixed,verbose=False)
 
+          ## Create the test sample
+          ## Default size is 10% of numtrain
           spectra_test,labels_test,wavelength_test = self.c3kmods.pullspectra(
                self.numtest,
                resolution=self.resolution, 
@@ -177,6 +182,14 @@ class TrainMod(object):
                FeH=self.fehrange,
                aFe=self.aferange,
                vtrub=self.vtrange)
+
+          # ## ##########################################
+          # ## PIC DEBUGGING
+          # from IPython import embed;embed()
+          # plt.figure()
+          # plt.plot(np.sort(labels_test[:, 1]))
+          # plt.show()
+          # ## ##########################################
 
           print('... Number of Pixels: {0}'.format(len(wavelength_test)))
           sys.stdout.flush()
@@ -221,7 +234,10 @@ class TrainMod(object):
                          data=np.array([x.encode("ascii", "ignore") for x in self.label_i]))
                     outfile_i.create_dataset('wavelengths',
                          data=np.array(wavelength_test))
-                    outfile_i.create_dataset('resolution',data=np.array(self.resolution))
+                    if self.resolution is not None:
+                         outfile_i.create_dataset('resolution',data=np.array(self.resolution))
+                    else:
+                         outfile_i.create_dataset('resolution',data=np.inf)
                     outfile_i.create_dataset('xmin',data=np.array(self.xmin))
                     outfile_i.create_dataset('xmax',data=np.array(self.xmax))
                     outfile_i.create_dataset('ymin',data=np.array(self.ymin))
