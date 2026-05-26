@@ -167,7 +167,12 @@ class TrainMod(object):
           print('    c3k: {0}'.format(self.c3kpath))
           print('    mist: {0}'.format(self.mistpath))
           sys.stdout.flush()
+
+          # self.c3kmods = readc3k(MISTpath=self.mistpath,C3Kpath=self.c3kpath,vtfixed=vtfixed,verbose=False)
+          
+          from ..utils.readflex import readc3k as readc3k
           self.c3kmods = readc3k(MISTpath=self.mistpath,C3Kpath=self.c3kpath,vtfixed=vtfixed,verbose=False)
+          self.label_i = self.c3kmods.PARAMETERS
 
           ## Create the test sample
           ## Default size is 10% of numtrain
@@ -187,7 +192,8 @@ class TrainMod(object):
           # ## PIC DEBUGGING
           # from IPython import embed;embed()
           # plt.figure()
-          # plt.plot(np.sort(labels_test[:, 1]))
+          # # plt.plot(np.sort(labels_test[:, 1]))
+          # plt.plot(spectra_test.T)
           # plt.show()
           # ## ##########################################
 
