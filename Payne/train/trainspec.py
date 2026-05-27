@@ -359,6 +359,8 @@ class TrainMod(object):
 
           # number of batches
           nbatches = self.numtrain // self.batchsize
+          ## PIC: Is it really a good idea to have as many validation sample than training?
+          self.numvalid = int(round(self.numtrain*0.2))
 
           print('... Number of epochs: {}'.format(self.numepochs))
           print('... Number of training steps: {}'.format(self.numsteps))
@@ -406,7 +408,7 @@ class TrainMod(object):
                Y_train_Tensor = Y_train_Tensor.to(device)
 
                spectra_valid,labels_valid,wavelength_valid = self.c3kmods.pullspectra(
-                    self.numtrain,
+                    self.numvalid,
                     resolution=self.resolution, 
                     waverange=self.waverange,
                     MISTweighting=False,
