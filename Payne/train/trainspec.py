@@ -408,7 +408,7 @@ class TrainMod(object):
                Y_train_Tensor = Y_train_Tensor.to(device)
 
                spectra_valid,labels_valid,wavelength_valid = self.c3kmods.pullspectra(
-                    self.numvalid,
+                    self.numtrain,
                     resolution=self.resolution, 
                     waverange=self.waverange,
                     MISTweighting=False,
