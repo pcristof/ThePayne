@@ -194,6 +194,7 @@ class readc3k(object):
         dividecont    = kwargs.get('dividecont',True)
         reclabelsel   = kwargs.get('reclabelsel',False)
         continuuabool = kwargs.get('returncontinuua',False)
+        spectrumMode = kwargs.get('spectrumMode','spectra')
         # timeit        = kwargs.get('timeit',False)
 
         labels = []
@@ -221,8 +222,14 @@ class readc3k(object):
         ## We can just choose a random index and pick the line in the grid...
         
         list_of_params = []
+        normFactor = 0
         for i in self.SPECTRA.keys():
             list_of_params.append(list(self.SPECTRA[i]['parameters']))
+            _normFactor = np.max(self.SPECTRA[i][spectrumMode])
+            if _normFactor>normFactor: normFactor=_normFactor
+        print(f'normFactor={normFactor}')
+        self.normFactor = normFactor
+        ## the normFactor will be used to normalize the fluxes
         ## Flatten that list
         full_list_of_params = []
         associated_key = []
@@ -260,7 +267,7 @@ class readc3k(object):
             
             ## Do not need to do a nearest-neighbor interpolation here
             _a = associated_key[index]; _b = associated_index[index]
-            spectra_i = self.SPECTRA[_a]['spectra'][_b]
+            spectra_i = self.SPECTRA[_a][spectrumMode][_b]
 
             # check to see if user defined labels to exclude, if so
             # continue on to the next iteration
@@ -327,7 +334,7 @@ class readc3k(object):
             # 	print('Convolve C3K to new R in {0}'.format(datetime.now()-starttime))
 
             labels.append(label_i)
-            spectra.append(spectra_i)
+            spectra.append(spectra_i/normFactor)
 
             # if requested, return continuua
             if continuuabool:

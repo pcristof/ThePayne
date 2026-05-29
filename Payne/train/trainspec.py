@@ -93,6 +93,10 @@ class TrainMod(object):
           else:
                self.batchsize = self.numtrain
 
+          ## Can be spectra or continuua
+          ## I am trying to keep them consistent with the keys in the files
+          self.spectrumMode = kwargs.get('spectrumMode','spectra')
+
           # number of neurons in each layer
           if 'H1' in kwargs:
                self.H1 = kwargs['H1']
@@ -125,6 +129,7 @@ class TrainMod(object):
                self.resolution = None
 
           self.waverange  = kwargs.get('waverange',[5150.0,5300.0])
+          self.spectrumMode  = kwargs.get('spectrumMode',[5150.0,5300.0])
 
           # check for user defined ranges for atm models
           self.teffrange  = kwargs.get('teff',None)
@@ -182,6 +187,7 @@ class TrainMod(object):
                waverange=self.waverange,
                MISTweighting=False,
                dividecont=self.dividecont,
+               spectrumMode=self.spectrumMode,
                Teff=self.teffrange,
                logg=self.loggrange,
                FeH=self.fehrange,
@@ -389,6 +395,7 @@ class TrainMod(object):
                     waverange=self.waverange,
                     MISTweighting=False,
                     dividecont=self.dividecont,
+                    spectrumMode=self.spectrumMode,
                     Teff=self.teffrange,
                     logg=self.loggrange,
                     FeH=self.fehrange,
@@ -412,7 +419,8 @@ class TrainMod(object):
                     resolution=self.resolution, 
                     waverange=self.waverange,
                     MISTweighting=False,
-                    dividecont=self.dividecont,               
+                    dividecont=self.dividecont,      
+                    spectrumMode=self.spectrumMode,         
                     Teff=self.teffrange,
                     logg=self.loggrange,
                     FeH=self.fehrange,
@@ -561,11 +569,13 @@ class TrainMod(object):
                               del outfile_i['model/{0}'.format(kk)]
                          except KeyError:
                               pass
-
+                         if 'normFactor' not in outfile_i:
+                              outfile_i.create_dataset('normFactor',data=self.c3kmods.normFactor)
                          outfile_i.create_dataset(
                               'model/{0}'.format(kk),
                               data=model.state_dict()[kk].cpu().numpy(),
                               compression='gzip')
+
                print('Finished Epoch {0} @ {1} ({2})'.format(epoch_i+1, datetime.now(),datetime.now() - epochtime))
 
           print('Finished training model, took: {0}'.format(
