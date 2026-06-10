@@ -100,7 +100,7 @@ class readc3k(object):
             diff_range = ranges[_param][1]-ranges[_param][0]
             pad = diff_range*0.1 ## 1% of the range used for padding
             if pad<0.01: pad=1.0 ## If the values are the same
-            self.minmax[_param] = [ranges[_param][0]-pad, ranges[_param][0]+pad]
+            self.minmax[_param] = [ranges[_param][0]-pad, ranges[_param][1]+pad]
         
         ## What is this and why are we enforcing 1.0 ???
         # create min-max for spectra
