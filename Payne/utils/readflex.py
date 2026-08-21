@@ -110,6 +110,7 @@ class readc3k(object):
 
         # # init random number object
         self.rng = np.random.default_rng()
+        self.mean_standard = None
 
     def pullspectra(self,num,**kwargs):
         '''
@@ -221,29 +222,64 @@ class readc3k(object):
         ##      2- Doing a nearest interpolator to choose the point in the grid
         ## We can just choose a random index and pick the line in the grid...
         
+        ## OH My, what I wrote is too complicated convoluted. Let's try simpler
+        ## Create a single list of all spectra and associated parameters:
+        ## CAUTION: the parameters in the SPECTRA object do not contain metallicites !
         list_of_params = []
-        normFactor = 0
-        for i in self.SPECTRA.keys():
-            list_of_params.append(list(self.SPECTRA[i]['parameters']))
-            _normFactor = np.max(self.SPECTRA[i][spectrumMode])
-            if _normFactor>normFactor: normFactor=_normFactor
-        print(f'normFactor={normFactor}')
-        self.normFactor = normFactor
-        ## the normFactor will be used to normalize the fluxes
-        ## Flatten that list
-        full_list_of_params = []
-        associated_key = []
-        associated_index = []
-        for l in range(len(list_of_params)):
-            for e in range(len(list_of_params[l])):
-                full_list_of_params.append(list_of_params[l][e])
-                associated_key.append(l)
-                associated_index.append(e)
-        list_of_params = full_list_of_params
-        ## Now I want indexing of this list:
-        list_of_params_index = [i for i in range(len(list_of_params))]
+        list_all_spectra = []
+        for i in range(len(self.SPECTRA)):
+            list_of_params+=list(self.SPECTRA[i]['parameters'])
+            list_all_spectra+=list(self.SPECTRA[i][spectrumMode])
+        list_of_params_index = list(np.arange(len(list_all_spectra)))
+        ## Dummy variables for now.
+        self.mean_standard = 0.0
+        self.std_standard = 1.0
+        self.normFactor = 1.0
+        
+        ## PIC: ------------------------------------
+        ## Previous code:
+        # list_of_params = []
+        # normFactor = 0
+        # all_spectra = []
+        # for i in self.SPECTRA.keys():
+        #     list_of_params.append(list(self.SPECTRA[i]['parameters']))
+        #     _normFactor = np.max(self.SPECTRA[i][spectrumMode])
+        #     if self.mean_standard is None:
+        #         for j in range(len(self.SPECTRA[i][spectrumMode])):
+        #             all_spectra.append(self.SPECTRA[i][spectrumMode][j])
+        #     if _normFactor>normFactor: normFactor=_normFactor
+
+        # if self.mean_standard is None:
+        #     # self.mean_standard = np.mean(all_spectra, axis=0)
+        #     # self.std_standard = np.std(all_spectra, axis=0)
+        #     ## Bypass these now
+            # self.mean_standard = 0.0
+            # self.std_standard = 1.0
+        #     print('Values used for standardization:')
+        #     print(self.mean_standard)
+        #     print(self.std_standard)
+            
+        # normFactor = 1.0 ## Because if trained on the PCA components... ?
+        # print(f'normFactor={normFactor}')
+        # self.normFactor = normFactor
+
+        # ## the normFactor will be used to normalize the fluxes
+        # ## Flatten that list
+        # full_list_of_params = []
+        # associated_key = []
+        # associated_index = []
+        # for l in range(len(list_of_params)):
+        #     for e in range(len(list_of_params[l])):
+        #         full_list_of_params.append(list_of_params[l][e])
+        #         associated_key.append(l)
+        #         associated_index.append(e)
+        # list_of_params = full_list_of_params
+        # ## Now I want indexing of this list:
+        # list_of_params_index = [i for i in range(len(list_of_params))]
+        ## PIC: ------------------------------------
 
         ii = 0
+        indices=[]
         while ii < num:
             print(f'Progress: {ii}/{num}', end='\r')
             if self.verbose:
@@ -252,22 +288,11 @@ class readc3k(object):
 
             ## Pick a random set of parameters
             index = self.rng.choice(list_of_params_index)
-            params = list_of_params[index]
+            list_of_params_index.remove(index) ## Remove element from the list
+            indices.append(index) ## The indices we've called
+            params = list_of_params[index] ## The parameters associated
             label_i = list(params)
-            params_arr = np.array(label_i)
-            list_of_params_index.remove(index)
-
-            ## Now check if any of the parameters are out of range
-            if labelsToConstrain is not None:
-                for i in range(len(self.PARAMETERS)):
-                    if self.PARAMETERS[i] in labelsToConstrain:
-                        if ((params[i]<paramRanges[i][0]) 
-                            | (params[i]>paramRanges[i][1])):
-                            print(f'ISSUE - {labels[i]} OUT OF BOUNDS')
-            
-            ## Do not need to do a nearest-neighbor interpolation here
-            _a = associated_key[index]; _b = associated_index[index]
-            spectra_i = self.SPECTRA[_a][spectrumMode][_b]
+            spectra_i = list_all_spectra[index] ## The spectrum associated
 
             # check to see if user defined labels to exclude, if so
             # continue on to the next iteration
@@ -282,6 +307,8 @@ class readc3k(object):
             # if so, then skip the append and go to next step in while loop
             # do this before the smoothing to reduce run time
             if (label_i in labels): ## This should no longer ever happen
+                print('ISSUE - the label is re-drawn')
+                from IPython import embed;embed()
                 print('label_i in labels')
                 print(label_i)
                 continue
@@ -292,29 +319,83 @@ class readc3k(object):
                 print(f'Found {np.isnan(spectra_i).sum()} NaN out of {len(spectra_i)}')
                 print(label_i)
                 continue
-            
-            # store a wavelength array as an instance, all of C3K has 
-            # the same wavelength sampling
-            if wavelength_o_flag:
-                wavelength_o = [] # initialize the output wavelength array
-                wavelength_o_flag = False # turn off this step for all subsequent models
-                wavelength_i = np.array(self.SPECTRA[0]['wavelengths'])
-                if resolution != None:
-                    # define new wavelength array with 3*resolution element sampling
-                    i = 1
-                    while True:
-                        wave_i = waverange[0]*(1.0 + 1.0/(3.0*resolution))**(i-1.0)
-                        if wave_i <= waverange[1]:
-                            wavelength_o.append(wave_i)
-                            i += 1
-                        else:
-                            break
-                    wavelength_o = np.array(wavelength_o)
-                else:
-                    wavecond = (wavelength_i >= waverange[0]) & (wavelength_i <= waverange[1])
-                    wavecond = np.array(wavecond,dtype=bool)
-                    wavelength_o = wavelength_i[wavecond]
 
+            ## PIC -----------------------------------
+            ## Old version
+
+            # ### FOR DEBUGGING
+            # #params_arr =  []
+            # #for i in range(len(list_of_params)):
+            # #    params_arr.append(list_of_params[i].tolist())
+            # #params_arr = np.array(params_arr)
+            # #####
+            # label_i = list(params)
+            # params_arr = np.array(label_i)
+            # list_of_params_index.remove(index)
+
+            # ## Now check if any of the parameters are out of range
+            # if labelsToConstrain is not None:
+            #     for i in range(len(self.PARAMETERS)):
+            #         if self.PARAMETERS[i] in labelsToConstrain:
+            #             if ((params[i]<paramRanges[i][0]) 
+            #                 | (params[i]>paramRanges[i][1])):
+            #                 print(f'ISSUE - {labels[i]} OUT OF BOUNDS')
+            
+            # ## Do not need to do a nearest-neighbor interpolation here
+            # _a = associated_key[index]; _b = associated_index[index]
+            # spectra_i = self.SPECTRA[_a][spectrumMode][_b]
+
+            # # check to see if user defined labels to exclude, if so
+            # # continue on to the next iteration
+            # if label_i in excludelabels:
+            #     print('Found spectrum in exclude labels')
+            #     continue
+            
+            # ## Here I have removed the option to divide by conitnuum.
+            # ## We can re-add this option later if needed.
+
+            # # check to see if label_i in labels
+            # # if so, then skip the append and go to next step in while loop
+            # # do this before the smoothing to reduce run time
+            # if (label_i in labels): ## This should no longer ever happen
+            #     from IPython import embed;embed()
+            #     print('label_i in labels')
+            #     print(label_i)
+            #     continue
+
+            # # check to see if spectrum has nan's, if so remove them as 
+            # # long as they are < 0.1% of the total number of pixels
+            # if (np.isfinite(spectra_i).sum() != len(spectra_i)):
+            #     print(f'Found {np.isnan(spectra_i).sum()} NaN out of {len(spectra_i)}')
+            #     print(label_i)
+            #     continue
+            ## PIC -----------------------------------
+ 
+#            # store a wavelength array as an instance, all of C3K has 
+#            # the same wavelength sampling
+#            if wavelength_o_flag:
+#                wavelength_o = [] # initialize the output wavelength array
+#                wavelength_o_flag = False # turn off this step for all subsequent models
+#                wavelength_i = np.array(self.SPECTRA[0]['wavelengths'])
+#                if resolution != None:
+#                    # define new wavelength array with 3*resolution element sampling
+#                    i = 1
+#                    while True:
+#                        wave_i = waverange[0]*(1.0 + 1.0/(3.0*resolution))**(i-1.0)
+#                        if wave_i <= waverange[1]:
+#                            wavelength_o.append(wave_i)
+#                            i += 1
+#                        else:
+#                            break
+#                    wavelength_o = np.array(wavelength_o)
+#                else:
+#                    wavecond = (wavelength_i >= waverange[0]) & (wavelength_i <= waverange[1])
+#                    wavecond = np.array(wavecond,dtype=bool)
+#                    wavelength_o = wavelength_i[wavecond]
+#
+
+            wavecond = np.ones(len(spectra_i), dtype=bool)
+            wavelength_o = np.arange(len(wavecond))
 
             # if user defined resolution to train at, the smooth C3K to that resolution
             if resolution != None:
@@ -334,7 +415,8 @@ class readc3k(object):
             # 	print('Convolve C3K to new R in {0}'.format(datetime.now()-starttime))
 
             labels.append(label_i)
-            spectra.append(spectra_i/normFactor)
+            # spectra.append(spectra_i/normFactor)
+            spectra.append((spectra_i-self.mean_standard)/self.std_standard)
 
             # if requested, return continuua
             if continuuabool:
