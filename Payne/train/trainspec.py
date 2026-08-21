@@ -344,7 +344,10 @@ class TrainMod(object):
           model.train()
 
           # initialize the loss function
-          loss_fn = torch.nn.MSELoss(reduction='sum')
+          ## PIC: The code I got was set to:
+          # loss_fn = torch.nn.MSELoss(reduction='sum')
+          ## PIC: but instead I now use:
+          loss_fn = torch.nn.MSELoss(reduction='mean')
           # loss_fn = torch.nn.SmoothL1Loss(reduction='mean')
           # loss_fn = torch.nn.KLDivLoss(size_average=False)
           # loss_fn = torch.nn.L1Loss(reduction = 'sum')
@@ -367,6 +370,7 @@ class TrainMod(object):
           nbatches = self.numtrain // self.batchsize
           ## PIC: Is it really a good idea to have as many validation sample than training?
           self.numvalid = int(round(self.numtrain*0.2))
+          nbatches_valid = self.numvalid // self.batchsize
 
           print('... Number of epochs: {}'.format(self.numepochs))
           print('... Number of training steps: {}'.format(self.numsteps))
@@ -388,21 +392,21 @@ class TrainMod(object):
                maxres_loss = []
 
                startreadintrainmod = datetime.now()
-
-               spectra_train,labels_train,wavelength_train = self.c3kmods.pullspectra(
-                    self.numtrain,
-                    resolution=self.resolution, 
-                    waverange=self.waverange,
-                    MISTweighting=False,
-                    dividecont=self.dividecont,
-                    spectrumMode=self.spectrumMode,
-                    Teff=self.teffrange,
-                    logg=self.loggrange,
-                    FeH=self.fehrange,
-                    aFe=self.aferange,
-                    vtrub=self.vtrange,
-                    excludelabels=np.array(self.testlabels),
-                    )
+               spectra_train,labels_train,wavelength_train = \
+                    self.c3kmods.pullspectra(
+                         self.numtrain,
+                         resolution=self.resolution, 
+                         waverange=self.waverange,
+                         MISTweighting=False,
+                         dividecont=self.dividecont,
+                         spectrumMode=self.spectrumMode,
+                         Teff=self.teffrange,
+                         logg=self.loggrange,
+                         FeH=self.fehrange,
+                         aFe=self.aferange,
+                         vtrub=self.vtrange,
+                         excludelabels=np.array(self.testlabels),
+                         )
                
                # create tensor for input training labels
                X_train_labels = labels_train[:,:len(self.label_i)]
@@ -415,7 +419,7 @@ class TrainMod(object):
                Y_train_Tensor = Y_train_Tensor.to(device)
 
                spectra_valid,labels_valid,wavelength_valid = self.c3kmods.pullspectra(
-                    self.numtrain,
+                    self.numvalid,
                     resolution=self.resolution, 
                     waverange=self.waverange,
                     MISTweighting=False,
@@ -484,17 +488,25 @@ class TrainMod(object):
                     # evaluate the validation set
                     if iter_i % 100 == 0:
                          model.eval()
-                         perm_valid = torch.randperm(self.numtrain)
+                         ## PIC: if I switch to self.numvalid below I need
+                         ## to do it here too.
+                         perm_valid = torch.randperm(self.numvalid)
                          if str(device) != 'cpu':
                               perm_valid = perm_valid.cuda()
 
                          loss_valid = 0
                          medres = 0
                          maxres = -np.inf
-                         for j in range(nbatches):
-                              idx = perm[t * self.batchsize : (t+1) * self.batchsize]
+                         for j in range(nbatches_valid):
+                              ## PIC: Is there a mistake here? Should we replace the following:
+                              # idx = perm[t * self.batchsize : (t+1) * self.batchsize]
+                              # PIC: with:
+                              idx = perm_valid[j * self.batchsize : (j+1) * self.batchsize]
 
-                              Y_pred_valid_Tensor = model(X_valid_Tensor[idx]) 
+                              try:
+                                   Y_pred_valid_Tensor = model(X_valid_Tensor[idx]) 
+                              except:
+                                   from IPython import embed;embed()
                               loss_valid += loss_fn(Y_pred_valid_Tensor, Y_valid_Tensor[idx])
                               if self.logplot:
                                    residual = torch.abs(Y_pred_valid_Tensor-Y_valid_Tensor[idx])
