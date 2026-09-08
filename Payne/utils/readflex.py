@@ -112,6 +112,26 @@ class readc3k(object):
         self.rng = np.random.default_rng()
         self.mean_standard = None
 
+        # Build a lightweight index of the spectra in each HDF5 file.
+        # We do NOT load the spectra themselves.
+
+        self._file_ids = []
+        self._file_offsets = []
+
+        offset = 0
+
+        for i in range(len(self.SPECTRA)):
+            n = self.SPECTRA[i]['parameters'].shape[0]
+
+            self._file_ids.append(i)
+            self._file_offsets.append(offset)
+
+            offset += n
+
+        self._file_offsets = np.asarray(self._file_offsets, dtype=np.int64)
+        self._nspectra = offset
+
+
     def pullspectra(self,num,**kwargs):
         '''
         Randomly draw num spectra from C3K with option to 
@@ -197,6 +217,100 @@ class readc3k(object):
         continuuabool = kwargs.get('returncontinuua',False)
         spectrumMode = kwargs.get('spectrumMode','spectra')
         # timeit        = kwargs.get('timeit',False)
+        
+
+        ## ONE ISSUE is the time it takes to read in the models.
+        ## We should be able to do faster by not creating huge
+        ## lists all the time.
+        # from IPython import embed;embed()
+
+        ## Dummy variables for now.
+        self.mean_standard = 0.0
+        self.std_standard = 1.0
+        self.normFactor = 1.0
+
+        available_indices = list(np.arange(self._nspectra, dtype=int))
+
+        ii = 0
+        indices=[]
+        labels=[]
+        spectra=[]
+        continuua=[]
+        while ii < num:
+            print(f'Progress: {ii}/{num}', end='\r')
+            if self.verbose:
+                print(f'... {ii+1}')
+                starttime = datetime.now()
+
+            ## Pick a random set of parameters
+            index = self.rng.choice(available_indices)
+            available_indices.remove(index) ## Remove element from the list
+
+            ## Now I need to decode this index in terms of file number and position
+            ## Now identify the file in which this index is:
+            file_id = np.searchsorted(self._file_offsets,
+                                        index, side='right' ) - 1
+            ## and the local id inside that file
+            local_id = (index - self._file_offsets[file_id])
+            ## Now checkout the parameter for this specific entry
+            _label = self.SPECTRA[file_id]['parameters'][local_id] 
+            ## If this parameter is to be excluded, restart
+            label_i = list(_label)
+            if label_i in excludelabels:
+                print('Found spectrum in exclude labels')
+                continue
+            ## Now extract the spectrum for this:
+            spectra_i = self.SPECTRA[file_id][spectrumMode][local_id]
+
+            wavecond = np.ones(len(spectra_i), dtype=bool)
+            wavelength_o = np.arange(len(wavecond))
+
+            # if user defined resolution to train at, the smooth C3K to that resolution
+            if resolution != None:
+                spectra_i = self.smoothspecfunc(wavelength_i,spectra_i,resolution,
+                    outwave=wavelength_o,smoothtype='R',fftsmooth=True)
+            else:
+                spectra_i = spectra_i[wavecond]
+
+            if continuuabool:
+                if resolution != None:
+                    continuua_i = self.smoothspecfunc(wavelength_i,continuua_i,resolution,
+                        outwave=wavelength_o,smoothtype='R',fftsmooth=True)
+                else:
+                    continuua_i = continuua_i[wavecond]
+
+            # if self.verbose:
+            # 	print('Convolve C3K to new R in {0}'.format(datetime.now()-starttime))
+
+            labels.append(label_i)
+            # spectra.append(spectra_i/normFactor)
+            spectra.append((spectra_i-self.mean_standard)/self.std_standard)
+
+            # if requested, return continuua
+            if continuuabool:
+                continuua.append(continuua_i)
+
+            # # if requested, record random selected parameters
+            # if reclabelsel:
+            #     if len(self.vtarr) > 0:
+            #         initlabels.append([T,L,FeH_i,alpha_i,vt_i])
+            #     else:
+            #         initlabels.append([T,L,FeH_i,alpha_i])
+            # print('Breaking loop')
+            # break
+            if self.verbose:
+                print(f'-> Added {ii+1}, total time: {0}'.format(datetime.now()-starttime))
+            ## Increase iterator
+            ii+=1
+        output = [np.array(spectra), np.array(labels),wavelength_o]
+
+        # if reclabelsel:
+        #     output += [np.array(initlabels)]
+        # if continuuabool:
+        #     output += [np.array(continuua)]
+
+        return output
+
 
         labels = []
         spectra = []

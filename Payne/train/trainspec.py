@@ -407,6 +407,8 @@ class TrainMod(object):
                          vtrub=self.vtrange,
                          excludelabels=np.array(self.testlabels),
                          )
+
+               print('... Done pulling spectra, now creating variables and tensors ...')
                
                # create tensor for input training labels
                X_train_labels = labels_train[:,:len(self.label_i)]
