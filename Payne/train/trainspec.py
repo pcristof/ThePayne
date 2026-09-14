@@ -516,7 +516,7 @@ class TrainMod(object):
                                    if maxres_i > maxres:
                                         maxres = maxres_i
 
-                         loss_valid /= nbatches
+                         loss_valid /= nbatches_valid
 
                          loss_data = loss.detach().data.item()
                          loss_valid_data = loss_valid.detach().data.item()

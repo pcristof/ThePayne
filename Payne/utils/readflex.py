@@ -371,31 +371,31 @@ class readc3k(object):
             #     continue
             ## PIC -----------------------------------
  
-#            # store a wavelength array as an instance, all of C3K has 
-#            # the same wavelength sampling
-#            if wavelength_o_flag:
-#                wavelength_o = [] # initialize the output wavelength array
-#                wavelength_o_flag = False # turn off this step for all subsequent models
-#                wavelength_i = np.array(self.SPECTRA[0]['wavelengths'])
-#                if resolution != None:
-#                    # define new wavelength array with 3*resolution element sampling
-#                    i = 1
-#                    while True:
-#                        wave_i = waverange[0]*(1.0 + 1.0/(3.0*resolution))**(i-1.0)
-#                        if wave_i <= waverange[1]:
-#                            wavelength_o.append(wave_i)
-#                            i += 1
-#                        else:
-#                            break
-#                    wavelength_o = np.array(wavelength_o)
-#                else:
-#                    wavecond = (wavelength_i >= waverange[0]) & (wavelength_i <= waverange[1])
-#                    wavecond = np.array(wavecond,dtype=bool)
-#                    wavelength_o = wavelength_i[wavecond]
-#
+           # store a wavelength array as an instance, all of C3K has 
+           # the same wavelength sampling
+            if wavelength_o_flag:
+               wavelength_o = [] # initialize the output wavelength array
+               wavelength_o_flag = False # turn off this step for all subsequent models
+               wavelength_i = np.array(self.SPECTRA[0]['wavelengths'])
+               if resolution != None:
+                   # define new wavelength array with 3*resolution element sampling
+                   i = 1
+                   while True:
+                       wave_i = waverange[0]*(1.0 + 1.0/(3.0*resolution))**(i-1.0)
+                       if wave_i <= waverange[1]:
+                           wavelength_o.append(wave_i)
+                           i += 1
+                       else:
+                           break
+                   wavelength_o = np.array(wavelength_o)
+               else:
+                   wavecond = (wavelength_i >= waverange[0]) & (wavelength_i <= waverange[1])
+                   wavecond = np.array(wavecond,dtype=bool)
+                   wavelength_o = wavelength_i[wavecond]
 
-            wavecond = np.ones(len(spectra_i), dtype=bool)
-            wavelength_o = np.arange(len(wavecond))
+
+            # wavecond = np.ones(len(spectra_i), dtype=bool)
+            # wavelength_o = np.arange(len(wavecond))
 
             # if user defined resolution to train at, the smooth C3K to that resolution
             if resolution != None:
