@@ -325,6 +325,7 @@ class TrainMod(object):
                # create a model
                if os.path.isfile(self.restartfile):
                     print('Restarting from File: {0} with NNtype: {1}'.format(self.restartfile,self.NNtype))
+                    from IPython import embed;embed()
                     sys.stdout.flush()
                     model = readNN(self.restartfile,NNtype=self.NNtype)
                else:
@@ -345,7 +346,7 @@ class TrainMod(object):
 
           # initialize the loss function
           ## PIC: The code I got was set to:
-          # loss_fn = torch.nn.MSELoss(reduction='sum')
+          #loss_fn = torch.nn.MSELoss(reduction='sum')
           ## PIC: but instead I now use:
           loss_fn = torch.nn.MSELoss(reduction='mean')
           # loss_fn = torch.nn.SmoothL1Loss(reduction='mean')
@@ -383,6 +384,13 @@ class TrainMod(object):
                print('... Pulling {0} Training/Validation Models for Epoch: {1}'.format(self.numtrain,epoch_i+1))
                sys.stdout.flush()
 
+	       if epoch == 50:
+                   optimizer.param_groups[0]['lr'] = 1e-3
+	       if epoch == 100:
+                   optimizer.param_groups[0]['lr'] = 1e-4
+	       if epoch == 150:
+                   optimizer.param_groups[0]['lr'] = 1e-5
+
                # initiate counter
                current_loss = np.inf
                iter_arr = []
@@ -392,8 +400,7 @@ class TrainMod(object):
                maxres_loss = []
 
                startreadintrainmod = datetime.now()
-               spectra_train,labels_train,wavelength_train = \
-                    self.c3kmods.pullspectra(
+               spectra_train,labels_train,wavelength_train = self.c3kmods.pullspectra(
                          self.numtrain,
                          resolution=self.resolution, 
                          waverange=self.waverange,
@@ -555,8 +562,8 @@ class TrainMod(object):
 
                          if iter_i % 500 == 0.0:
                               print(
-                                   '--> Ep: {0:d} -- Iter {1:d}/{2:d} -- Time/step: {3} -- Train Loss: {4:.6f} -- Valid Loss: {5:.6f}'.format(
-                                   int(epoch_i+1),int(iter_i+1),int(self.numsteps), (datetime.now()-itertime), loss_data, loss_valid_data)
+                                   '--> Ep: {0:d} -- Iter {1:d}/{2:d} -- Time/step: {3} -- Train Loss: {4:.6f}*E6 -- Valid Loss: {5:.6f}E6'.format(
+                                   int(epoch_i+1),int(iter_i+1),int(self.numsteps), (datetime.now()-itertime), loss_data*1e-6, loss_valid_data*1e-6)
                                    )
                          sys.stdout.flush()                      
 
@@ -595,5 +602,4 @@ class TrainMod(object):
           sys.stdout.flush()
 
           return [model, optimizer, datetime.now()-starttime]
-
 
