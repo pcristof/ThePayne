@@ -384,12 +384,14 @@ class TrainMod(object):
                print('... Pulling {0} Training/Validation Models for Epoch: {1}'.format(self.numtrain,epoch_i+1))
                sys.stdout.flush()
 
-	       if epoch == 50:
-                   optimizer.param_groups[0]['lr'] = 1e-3
-	       if epoch == 100:
-                   optimizer.param_groups[0]['lr'] = 1e-4
-	       if epoch == 150:
-                   optimizer.param_groups[0]['lr'] = 1e-5
+               if epoch_i == 0:
+                    optimizer.param_groups[0]['lr'] = 1e-3
+               if epoch_i == 50:
+                    optimizer.param_groups[0]['lr'] = 5e-4
+               if epoch_i == 100:
+                    optimizer.param_groups[0]['lr'] = 1e-4
+               if epoch_i == 150:
+                    optimizer.param_groups[0]['lr'] = 1e-5
 
                # initiate counter
                current_loss = np.inf
