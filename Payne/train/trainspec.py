@@ -325,7 +325,6 @@ class TrainMod(object):
                # create a model
                if os.path.isfile(self.restartfile):
                     print('Restarting from File: {0} with NNtype: {1}'.format(self.restartfile,self.NNtype))
-                    from IPython import embed;embed()
                     sys.stdout.flush()
                     model = readNN(self.restartfile,NNtype=self.NNtype)
                else:
@@ -344,11 +343,32 @@ class TrainMod(object):
           model.to(device)
           model.train()
 
+
+          def loss_fn(pred, target, threshold=0.005, factor=10.0):
+               residual = torch.abs(pred - target)
+
+               weights = 1.0 + factor * torch.relu(residual / threshold - 1.0)
+               weights = weights.detach()
+
+               return (weights * residual**2).mean()
+
+
+          # def loss_fn(pred, target, threshold=0.005, factor=10.0):
+          #      residual = np.abs(pred - target)
+
+          #      # weights = 1.0 + factor * torch.relu(residual / threshold - 1.0)
+          #      weights = 1.0 + factor * np.maximum(0, residual/threshold-1.0) #* torch.relu(residual / threshold - 1.0)
+          #      # weights = weights.detach()
+
+          #      return (weights * residual**2).mean()
+
+
           # initialize the loss function
           ## PIC: The code I got was set to:
           #loss_fn = torch.nn.MSELoss(reduction='sum')
           ## PIC: but instead I now use:
-          loss_fn = torch.nn.MSELoss(reduction='mean')
+          # loss_fn = torch.nn.MSELoss(reduction='mean')
+          ## NB: for now I am trying with the loss above to penalize more the pixels that are really off.
           # loss_fn = torch.nn.SmoothL1Loss(reduction='mean')
           # loss_fn = torch.nn.KLDivLoss(size_average=False)
           # loss_fn = torch.nn.L1Loss(reduction = 'sum')
@@ -524,6 +544,13 @@ class TrainMod(object):
                                         medres = medres_i
                                    if maxres_i > maxres:
                                         maxres = maxres_i
+
+                         ## --------------------------------
+                         ## PIC: For debugging only:
+                         # from IPython import embed;embed()
+                         # y_pred = Y_pred_valid_Tensor.detach().cpu().numpy()
+                         # y_true = Y_valid_Tensor[idx].detach().cpu().numpy()
+                         ## --------------------------------
 
                          loss_valid /= nbatches_valid
 
