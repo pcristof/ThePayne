@@ -390,7 +390,7 @@ class TrainMod(object):
           #     [p for p in model.parameters() if p.requires_grad==True], lr=learning_rate)
 
           # initialize the scheduler to adjust the learning rate
-          scheduler = StepLR(optimizer,100,gamma=0.90)
+          scheduler = StepLR(optimizer,50,gamma=0.50)
           # scheduler = ReduceLROnPlateau(optimizer,mode='min',factor=0.1)
           # scheduler = ExponentialLR(optimizer,100,gamma=0.90)
 
