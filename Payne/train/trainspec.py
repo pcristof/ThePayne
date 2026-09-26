@@ -352,13 +352,13 @@ class TrainMod(object):
 
           #      return (weights * residual**2).mean()
 
-          def loss_fn(pred, target, epsilon=0.01, floor=1e-3):
+          def loss_fn(pred, target, epsilon=0.005, floor=1e-3, power=4.):
                '''Loss so that differences smaller than 1% do *not* pernalize contibute to the loss
                while the rest increases with increasing loss.
                The idea is to encourage the network to learn from '''
                relative_error = torch.abs(pred - target) / torch.clamp(torch.abs(target), min=floor)
                excess = torch.relu(relative_error - epsilon)
-               return torch.mean(excess**2)
+               return torch.mean(excess**power)
 
           # def loss_fn(pred, target, threshold=0.005, factor=10.0):
           #      residual = np.abs(pred - target)
