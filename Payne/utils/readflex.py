@@ -231,14 +231,19 @@ class readc3k(object):
         ## CAUTION: the parameters in the SPECTRA object do not contain metallicites !
         list_of_params = []
         list_all_spectra = []
+        normFactor = 1
+        _normFactor = 0
         for i in range(len(self.SPECTRA)):
             list_of_params+=list(self.SPECTRA[i]['parameters'])
+            if spectrumMode=='continuua':
+                _normFactor = np.max(self.SPECTRA[i][spectrumMode])
             list_all_spectra+=list(self.SPECTRA[i][spectrumMode])
+            if _normFactor>normFactor: normFactor=_normFactor
         list_of_params_index = list(np.arange(len(list_all_spectra)))
         ## Dummy variables for now.
         self.mean_standard = 0.0
         self.std_standard = 1.0
-        self.normFactor = 1.0
+        self.normFactor = normFactor
         
         ## PIC: ------------------------------------
         ## Previous code:
@@ -420,8 +425,8 @@ class readc3k(object):
             # 	print('Convolve C3K to new R in {0}'.format(datetime.now()-starttime))
 
             labels.append(label_i)
-            # spectra.append(spectra_i/normFactor)
-            spectra.append((spectra_i-self.mean_standard)/self.std_standard)
+            spectra.append(spectra_i/self.normFactor)
+            # spectra.append((spectra_i-self.mean_standard)/self.std_standard)
 
             # if requested, return continuua
             if continuuabool:

@@ -352,10 +352,12 @@ class TrainMod(object):
 
           #      return (weights * residual**2).mean()
 
-          def loss_fn(pred, target, epsilon=0.005, floor=1e-3, power=4.):
+          def loss_fn(pred, target, epsilon=0.05, floor=1e-3, power=2.):
                '''Loss so that differences smaller than 1% do *not* pernalize contibute to the loss
                while the rest increases with increasing loss.
-               The idea is to encourage the network to learn from '''
+               In practice epsilon acts as a limit after which we stop trying to optimize. 
+               If we reach a precision of epsilon, we simply do not try to do better.  
+                  '''
                relative_error = torch.abs(pred - target) / torch.clamp(torch.abs(target), min=floor)
                excess = torch.relu(relative_error - epsilon)
                return torch.mean(excess**power)
