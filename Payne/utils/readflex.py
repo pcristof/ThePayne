@@ -233,10 +233,12 @@ class readc3k(object):
         list_all_spectra = []
         normFactor = 1
         _normFactor = 0
+        T = None
         for i in range(len(self.SPECTRA)):
             list_of_params+=list(self.SPECTRA[i]['parameters'])
             if spectrumMode=='continuua':
                 _normFactor = np.max(self.SPECTRA[i][spectrumMode])
+                T = np.polynomial.chebyshev.chebvander(self.SPECTRA[i]['wavelengths'], self.SPECTRA[i].attrs['chebychev_degree'])
             list_all_spectra+=list(self.SPECTRA[i][spectrumMode])
             if _normFactor>normFactor: normFactor=_normFactor
         list_of_params_index = list(np.arange(len(list_all_spectra)))
@@ -244,6 +246,9 @@ class readc3k(object):
         self.mean_standard = 0.0
         self.std_standard = 1.0
         self.normFactor = normFactor
+
+        self.spectrumMode = spectrumMode
+        self.chebychev_T = T
         
         ## PIC: ------------------------------------
         ## Previous code:
@@ -412,7 +417,8 @@ class readc3k(object):
                 spectra_i = self.smoothspecfunc(wavelength_i,spectra_i,resolution,
                     outwave=wavelength_o,smoothtype='R',fftsmooth=True)
             else:
-                spectra_i = spectra_i[wavecond]
+                if self.spectrumMode!='continuua':
+                    spectra_i = spectra_i[wavecond]
 
             if continuuabool:
                 if resolution != None:

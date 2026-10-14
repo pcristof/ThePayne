@@ -233,7 +233,8 @@ class TrainMod(object):
           # D_in is input dimension
           # D_out is output dimension
           self.D_in  = len(self.label_i)
-          self.D_out = len(wavelength_test)
+          # self.D_out = len(wavelength_test)
+          self.D_out = len(spectra_test[0])
 
           # initialize the output file
           with h5py.File('{0}'.format(self.outfilename),'w') as outfile_i:
@@ -352,13 +353,26 @@ class TrainMod(object):
 
           #      return (weights * residual**2).mean()
 
-          def loss_fn(pred, target, epsilon=0.05, floor=1e-3, power=2.):
+          def loss_fn_spectra(pred, target, epsilon=0.005, floor=1e-3, power=2., T=None):
                '''Loss so that differences smaller than 1% do *not* pernalize contibute to the loss
                while the rest increases with increasing loss.
                In practice epsilon acts as a limit after which we stop trying to optimize. 
                If we reach a precision of epsilon, we simply do not try to do better.  
                   '''
                relative_error = torch.abs(pred - target) / torch.clamp(torch.abs(target), min=floor)
+               excess = torch.relu(relative_error - epsilon)
+               return torch.mean(excess**power)
+
+          def loss_fn_continua(pred, target, epsilon=0.005, floor=1e-3, power=2., T=None):
+               '''Loss so that differences smaller than 1% do *not* pernalize contibute to the loss
+               while the rest increases with increasing loss.
+               In practice epsilon acts as a limit after which we stop trying to optimize. 
+               If we reach a precision of epsilon, we simply do not try to do better.  
+                  '''
+               _pred = pred @ T.T
+               _target = target @ T.T
+
+               relative_error = torch.abs(_pred - _target) / torch.clamp(torch.abs(_target), min=floor)
                excess = torch.relu(relative_error - epsilon)
                return torch.mean(excess**power)
 
@@ -371,6 +385,12 @@ class TrainMod(object):
 
           #      return (weights * residual**2).mean()
 
+          if self.c3kmods.spectrumMode=='continuua':
+               T = torch.as_tensor(self.c3kmods.chebychev_T, dtype=torch.float32, device=device)
+               loss_fn = loss_fn_continua
+          else:
+               T = None
+               loss_fn = loss_fn_spectra
 
           # initialize the loss function
           ## PIC: The code I got was set to:
@@ -470,6 +490,8 @@ class TrainMod(object):
                     vtrub=self.vtrange,
                     excludelabels=np.array(list(self.testlabels)+list(X_train_labels)),)
 
+               self.wave = wavelength_valid
+
                # create tensor for input validation labels
                X_valid_labels = labels_valid[:,:len(self.label_i)]
                X_valid_Tensor = Variable(torch.from_numpy(X_valid_labels).type(dtype))
@@ -502,7 +524,7 @@ class TrainMod(object):
                               Y_pred_train_Tensor = model(X_train_Tensor[idx])
 
                               # Compute and print loss.
-                              loss = loss_fn(Y_pred_train_Tensor, Y_train_Tensor[idx])
+                              loss = loss_fn(Y_pred_train_Tensor, Y_train_Tensor[idx], T=T)
 
                               # Backward pass: compute gradient of the loss with respect to model parameters
                               optimizer.zero_grad()
@@ -545,7 +567,7 @@ class TrainMod(object):
                                    Y_pred_valid_Tensor = model(X_valid_Tensor[idx]) 
                               except:
                                    from IPython import embed;embed()
-                              loss_valid += loss_fn(Y_pred_valid_Tensor, Y_valid_Tensor[idx])
+                              loss_valid += loss_fn(Y_pred_valid_Tensor, Y_valid_Tensor[idx], T=T)
                               if self.logplot:
                                    residual = torch.abs(Y_pred_valid_Tensor-Y_valid_Tensor[idx])
                                    medres_i,maxres_i = float(residual.median()),float(residual.max())
