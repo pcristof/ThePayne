@@ -68,13 +68,17 @@ class readc3k(object):
                                 'r', libver='latest', swmr=True)
             if paramkey is None:
                 if 'parameters' in self.SPECTRA[i].keys():
-                    paramekey = 'parameters'
+                    paramkey = 'parameters'
                 elif 'params' in self.SPECTRA[i].keys():
                     paramkey = 'params'
                 elif 'param' in self.SPECTRA[i].keys():
                     paramkey = 'param'
                 elif 'pars' in self.SPECTRA[i].keys():
                     paramkey = 'pars'
+                else:
+                    raise Exception('Could not find where the'
+                                    +' pameters are regiseterd in '
+                                    +f'{self.SPECTRA[i].keys()}')
             ## Get the labels from the parameters:
             _params = list(self.SPECTRA[i][paramkey].dtype.names)
             ## From the data, define the boundaries of our grid
