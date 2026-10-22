@@ -62,6 +62,7 @@ class readc3k(object):
 
         self.PARAMETERS = None
         ranges = None
+        ntot = 0
         for fname in filenames:
             self.SPECTRA[i] = h5py.File(
                                 fname,
@@ -81,6 +82,7 @@ class readc3k(object):
                                     +f'{self.SPECTRA[i].keys()}')
             ## Get the labels from the parameters:
             _params = list(self.SPECTRA[i][paramkey].dtype.names)
+            ntot+=len(_params)
             ## From the data, define the boundaries of our grid
             if ranges is None: ## initialize
                 ranges = {}
@@ -103,6 +105,8 @@ class readc3k(object):
                                     +'input.')
             i+=1
         
+        print(f'Found {ntot} models')
+
         self.paramkey = paramkey        
 
         ## The following is needed for the rest of the program
