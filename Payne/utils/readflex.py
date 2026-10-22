@@ -80,9 +80,11 @@ class readc3k(object):
                     raise Exception('Could not find where the'
                                     +' pameters are regiseterd in '
                                     +f'{self.SPECTRA[i].keys()}')
+
+            ntot+=len(self.SPECTRA[i][paramkey])
+
             ## Get the labels from the parameters:
             _params = list(self.SPECTRA[i][paramkey].dtype.names)
-            ntot+=len(_params)
             ## From the data, define the boundaries of our grid
             if ranges is None: ## initialize
                 ranges = {}
