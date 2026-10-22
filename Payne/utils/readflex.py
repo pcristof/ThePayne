@@ -219,6 +219,13 @@ class readc3k(object):
             isPCA = True
         # timeit        = kwargs.get('timeit',False)
 
+        if 'wavelengths' in self.SPECTRA[0].keys():
+            wavekey = 'wavelengths'
+        elif 'wave' in self.SPECTRA[0].keys():
+            wavekey = 'wave'
+        else:
+            raise Exception('Could not find the wavelength solution in the file')
+
         labels = []
         spectra = []
         wavelength_o_flag = True
@@ -259,7 +266,7 @@ class readc3k(object):
             # list_of_params+=list(self.SPECTRA[i][paramkey])
             if spectrumMode=='continuua':
                 _normFactor = np.max(self.SPECTRA[i][spectrumMode])
-                T = np.polynomial.chebyshev.chebvander(self.SPECTRA[i]['wavelengths'], self.SPECTRA[i].attrs['chebychev_degree'])
+                T = np.polynomial.chebyshev.chebvander(self.SPECTRA[i][wavekey], self.SPECTRA[i].attrs['chebychev_degree'])
             # list_all_spectra+=list(self.SPECTRA[i][spectrumMode])
             params_datasets.append(self.SPECTRA[i][paramkey])
             spectra_datasets.append(self.SPECTRA[i][spectrumMode])
@@ -425,7 +432,7 @@ class readc3k(object):
                 if wavelength_o_flag:
                     wavelength_o = [] # initialize the output wavelength array
                     wavelength_o_flag = False # turn off this step for all subsequent models
-                    wavelength_i = np.array(self.SPECTRA[0]['wavelengths'])
+                    wavelength_i = np.array(self.SPECTRA[0][wavekey])
                     if resolution != None:
                         # define new wavelength array with 3*resolution element sampling
                         i = 1
@@ -443,7 +450,7 @@ class readc3k(object):
                         wavelength_o = wavelength_i[wavecond]
             elif isPCA:
                 wavecond = np.ones(len(spectra_i), dtype=bool)
-                wavelength_i = np.array(self.SPECTRA[0]['wavelengths'])
+                wavelength_i = np.array(self.SPECTRA[0][wavekey])
                 wavelength_o = wavelength_i
 
             # if user defined resolution to train at, the smooth C3K to that resolution
@@ -613,7 +620,7 @@ class readc3k(object):
             if wavelength_o_flag:
                 wavelength_o = [] # initialize the output wavelength array
                 wavelength_o_flag = False # turn off this step for all subsequent models
-                wavelength_i = np.array(C3K_i['wavelengths'])
+                wavelength_i = np.array(C3K_i[wavekey])
                 if resolution != None:
                     # define new wavelength array with 3*resolution element sampling
                     i = 1
