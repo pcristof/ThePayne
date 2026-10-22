@@ -54,6 +54,8 @@ class readc3k(object):
         filenames = glob.glob(self.modelPath+'*.h5')
         i = 0
 
+        paramkey = None
+
         if len(filenames)==0:
             raise Exception('Could not find any model in the input directory.'
                             +f'\nInput provided: {self.modelPath}')
@@ -64,19 +66,28 @@ class readc3k(object):
             self.SPECTRA[i] = h5py.File(
                                 fname,
                                 'r', libver='latest', swmr=True)
+            if paramkey is None:
+                if 'parameters' in self.spectra[i].keys():
+                    paramekey = 'parameters'
+                elif 'params' in self.spectra[i].keys():
+                    paramkey = 'params'
+                elif 'param' in self.spectra[i].keys():
+                    paramkey = 'param'
+                elif 'pars' in self.spectra[i].keys():
+                    paramkey = 'pars'
             ## Get the labels from the parameters:
-            _params = list(self.SPECTRA[i]['parameters'].dtype.names)
+            _params = list(self.SPECTRA[i][paramkey].dtype.names)
             ## From the data, define the boundaries of our grid
             if ranges is None: ## initialize
                 ranges = {}
                 for _p in _params:
-                    _min = np.min(self.SPECTRA[i]['parameters'][_p])
-                    _max = np.max(self.SPECTRA[i]['parameters'][_p])
+                    _min = np.min(self.SPECTRA[i][paramkey][_p])
+                    _max = np.max(self.SPECTRA[i][paramkey][_p])
                     ranges[_p] = [_min, _max]
             else: ## Check that we have the whole ranges
                 for _p in _params:
-                    _min = np.min(self.SPECTRA[i]['parameters'][_p])
-                    _max = np.max(self.SPECTRA[i]['parameters'][_p])
+                    _min = np.min(self.SPECTRA[i][paramkey][_p])
+                    _max = np.max(self.SPECTRA[i][paramkey][_p])
                     if _min<ranges[_p][0]: ranges[_p][0] = _min
                     if _max>ranges[_p][1]: ranges[_p][1] = _max
             if self.PARAMETERS is None:
@@ -234,14 +245,24 @@ class readc3k(object):
         normFactor = 1
         _normFactor = 0
         T = None
+        params_datasets = []
+        spectra_datasets = []
+        lengths = []
         for i in range(len(self.SPECTRA)):
-            list_of_params+=list(self.SPECTRA[i]['parameters'])
+            # list_of_params+=list(self.SPECTRA[i][paramkey])
             if spectrumMode=='continuua':
                 _normFactor = np.max(self.SPECTRA[i][spectrumMode])
                 T = np.polynomial.chebyshev.chebvander(self.SPECTRA[i]['wavelengths'], self.SPECTRA[i].attrs['chebychev_degree'])
-            list_all_spectra+=list(self.SPECTRA[i][spectrumMode])
+            # list_all_spectra+=list(self.SPECTRA[i][spectrumMode])
+            params_datasets.append(self.SPECTRA[i][paramkey])
+            spectra_datasets.append(self.SPECTRA[i][spectrumMode])
+            lengths.append(len(self.SPECTRA[i][spectrumMode]))
             if _normFactor>normFactor: normFactor=_normFactor
-        list_of_params_index = list(np.arange(len(list_all_spectra)))
+        # list_of_params_index = list(np.arange(len(list_all_spectra)))
+        offsets = np.cumsum([0] + lengths)
+        total_spectra = offsets[-1]
+        list_of_params_index = list(range(total_spectra))
+
         ## Dummy variables for now.
         self.mean_standard = 0.0
         self.std_standard = 1.0
@@ -256,7 +277,7 @@ class readc3k(object):
         # normFactor = 0
         # all_spectra = []
         # for i in self.SPECTRA.keys():
-        #     list_of_params.append(list(self.SPECTRA[i]['parameters']))
+        #     list_of_params.append(list(self.SPECTRA[i][paramkey]))
         #     _normFactor = np.max(self.SPECTRA[i][spectrumMode])
         #     if self.mean_standard is None:
         #         for j in range(len(self.SPECTRA[i][spectrumMode])):
@@ -304,9 +325,15 @@ class readc3k(object):
             index = self.rng.choice(list_of_params_index)
             list_of_params_index.remove(index) ## Remove element from the list
             indices.append(index) ## The indices we've called
-            params = list_of_params[index] ## The parameters associated
+            # params = list_of_params[index] ## The parameters associated
+            # label_i = list(params)
+            # spectra_i = list_all_spectra[index] ## The spectrum associated
+            file_idx = np.searchsorted(offsets[1:], index, side='right')
+            row_idx = index - offsets[file_idx]
+
+            params = params_datasets[file_idx][row_idx]
             label_i = list(params)
-            spectra_i = list_all_spectra[index] ## The spectrum associated
+            spectra_i = spectra_datasets[file_idx][row_idx]
 
             # check to see if user defined labels to exclude, if so
             # continue on to the next iteration
@@ -527,7 +554,7 @@ class readc3k(object):
                 # select the C3K spectra at that [Fe/H], [alpha/Fe], vturb
                 C3K_i = self.C3K[alpha_i][FeH_i][vt_i]
                 # create array of all labels in specific C3K file
-                C3Kpars = np.array(C3K_i['parameters'])
+                C3Kpars = np.array(C3K_i[paramkey])
                 # tack on vturb to parameter array
                 C3Kpars = rfn.rec_append_fields(
                     C3Kpars,'vt',
@@ -537,7 +564,7 @@ class readc3k(object):
                 # select the C3K spectra at that [Fe/H] and [alpha/Fe]
                 C3K_i = self.C3K[alpha_i][FeH_i]
                 # create array of all labels in specific C3K file
-                C3Kpars = np.array(C3K_i['parameters'])
+                C3Kpars = np.array(C3K_i[paramkey])
 
             # convert log(teff) to teff
             C3Kpars['logt'] = 10.0**C3Kpars['logt']
@@ -731,7 +758,7 @@ class readc3k(object):
             C3K_i = self.C3K[alpha_i][FeH_i]
 
             # create array of all labels in specific C3K file
-            C3Kpars = np.array(C3K_i['parameters'])
+            C3Kpars = np.array(C3K_i[paramkey])
 
             # do a nearest neighbor interpolation on Teff and log(g) in the C3K grid
             C3KNN = NearestNDInterpolator(
