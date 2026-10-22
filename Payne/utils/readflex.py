@@ -103,6 +103,8 @@ class readc3k(object):
                                     +'input.')
             i+=1
         
+        self.paramkey = paramkey        
+
         ## The following is needed for the rest of the program
         ## create min-max dictionary for input labels
         self.minmax = {}
@@ -252,6 +254,7 @@ class readc3k(object):
         params_datasets = []
         spectra_datasets = []
         lengths = []
+        paramkey = self.paramkey
         for i in range(len(self.SPECTRA)):
             # list_of_params+=list(self.SPECTRA[i][paramkey])
             if spectrumMode=='continuua':
@@ -553,7 +556,7 @@ class readc3k(object):
                 print(self.alphaarr)
                 print(alpha_i)
                 raise				
-
+            paramkey = self.paramkey
             if len(self.vtarr) > 0:
                 # select the C3K spectra at that [Fe/H], [alpha/Fe], vturb
                 C3K_i = self.C3K[alpha_i][FeH_i][vt_i]
