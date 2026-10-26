@@ -205,6 +205,12 @@ class readc3k(object):
         else:
             resolution = None
 
+        ## PIC: Now I implement a FWHM to broaden the spectra
+        if 'fwhm' in kwargs:
+            fwhm = kwargs['fwhm']
+        else:
+            fwhm = 0.
+
         if 'excludelabels' in kwargs:
             excludelabels = kwargs['excludelabels'].T.tolist()
         else:
@@ -497,6 +503,14 @@ class readc3k(object):
                 print(f'-> Added {ii+1}, total time: {0}'.format(datetime.now()-starttime))
             ## Increase iterator
             ii+=1
+
+        ## PIC: And here a  littl bit of magic. We can broaden the spectra
+        ## for instrumental width assuming that the wavelengths are constant
+        ## in velocity. This means that a single convolution does the trick:
+        from Payne.utils import broaden
+        for i in range(len(spectra)):
+            spectra[i] = broaden.broaden_spectrum(wavelength_o, spectra[i], vinstru=fwhm)
+
         output = [np.array(spectra), np.array(labels),wavelength_o]
 
         if reclabelsel:
