@@ -227,8 +227,9 @@ class readc3k(object):
         spectrumMode = kwargs.get('spectrumMode','spectra')
         isPCA = False
         if spectrumMode=='pca':
-            spectrumMode='spectra'
+            spectrumMode='coeffs'
             isPCA = True
+        self.isPCA = isPCA
         # timeit        = kwargs.get('timeit',False)
 
         if 'wavelengths' in self.SPECTRA[0].keys():
@@ -279,6 +280,11 @@ class readc3k(object):
             if spectrumMode=='continuua':
                 _normFactor = np.max(self.SPECTRA[i][spectrumMode])
                 T = np.polynomial.chebyshev.chebvander(self.SPECTRA[i][wavekey], self.SPECTRA[i].attrs['chebychev_degree'])
+            elif spectrumMode=='coeffs': ## that is for a pca
+                self.pca_basis = self.SPECTRA[i]['basis'][()]
+                self.pca_mean_spectrum = self.SPECTRA[i]['mean_spectrum'][()]
+                # self.pca_components_Tensor = torch.from_numpy(pca_components).type(dtype).to(device)
+                # self.pca_mean_Tensor = torch.from_numpy(pca_mean).type(dtype).to(device)
             # list_all_spectra+=list(self.SPECTRA[i][spectrumMode])
             params_datasets.append(self.SPECTRA[i][paramkey])
             spectra_datasets.append(self.SPECTRA[i][spectrumMode])
@@ -440,7 +446,7 @@ class readc3k(object):
  
            # store a wavelength array as an instance, all of C3K has 
            # the same wavelength sampling
-            if not isPCA:
+            if 1>100:#$not isPCA:
                 if wavelength_o_flag:
                     wavelength_o = [] # initialize the output wavelength array
                     wavelength_o_flag = False # turn off this step for all subsequent models

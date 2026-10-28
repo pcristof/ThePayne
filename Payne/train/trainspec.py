@@ -412,7 +412,7 @@ class TrainMod(object):
           #     [p for p in model.parameters() if p.requires_grad==True], lr=learning_rate)
 
           # initialize the scheduler to adjust the learning rate
-          scheduler = StepLR(optimizer,50,gamma=0.50)
+          scheduler = StepLR(optimizer,10,gamma=0.50)
           # scheduler = ReduceLROnPlateau(optimizer,mode='min',factor=0.1)
           # scheduler = ExponentialLR(optimizer,100,gamma=0.90)
 
@@ -502,6 +502,9 @@ class TrainMod(object):
                Y_valid_Tensor = Variable(torch.from_numpy(Y_valid).type(dtype), requires_grad=False)
                Y_valid_Tensor = Y_valid_Tensor.to(device)               
 
+               pca_components_Tensor = torch.from_numpy(self.c3kmods.pca_basis).type(dtype).to(device)
+               pca_mean_Tensor = torch.from_numpy(self.c3kmods.pca_mean_spectrum).type(dtype).to(device)
+
                print('... Finished reading in models ({})'.format(datetime.now() - startreadintrainmod))
 
                cc = 0
@@ -524,7 +527,12 @@ class TrainMod(object):
                               Y_pred_train_Tensor = model(X_train_Tensor[idx])
 
                               # Compute and print loss.
-                              loss = loss_fn(Y_pred_train_Tensor, Y_train_Tensor[idx], T=T)
+                              if self.c3kmods.isPCA:
+                                   Y_pred_train_spec = Y_pred_train_Tensor @ pca_components_Tensor + pca_mean_Tensor
+                                   Y_true_train_spec = Y_train_Tensor[idx] @ pca_components_Tensor + pca_mean_Tensor
+                                   loss = loss_fn(Y_pred_train_spec, Y_true_train_spec, T=T)
+                              else:
+                                   loss = loss_fn(Y_pred_train_Tensor, Y_train_Tensor[idx], T=T)
 
                               # Backward pass: compute gradient of the loss with respect to model parameters
                               optimizer.zero_grad()
@@ -565,9 +573,14 @@ class TrainMod(object):
 
                               try:
                                    Y_pred_valid_Tensor = model(X_valid_Tensor[idx]) 
+                                   if self.c3kmods.isPCA:
+                                        Y_pred_valid_spec = Y_pred_valid_Tensor @ pca_components_Tensor + pca_mean_Tensor
+                                        Y_true_valid_spec = Y_valid_Tensor[idx] @ pca_components_Tensor + pca_mean_Tensor
+                                        loss_valid += loss_fn(Y_pred_valid_spec, Y_true_valid_spec, T=T)
+                                   else:
+                                        loss_valid += loss_fn(Y_pred_valid_Tensor, Y_valid_Tensor[idx], T=T)
                               except:
                                    from IPython import embed;embed()
-                              loss_valid += loss_fn(Y_pred_valid_Tensor, Y_valid_Tensor[idx], T=T)
                               if self.logplot:
                                    residual = torch.abs(Y_pred_valid_Tensor-Y_valid_Tensor[idx])
                                    medres_i,maxres_i = float(residual.median()),float(residual.max())
