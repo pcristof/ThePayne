@@ -180,7 +180,7 @@ class LinNet(nn.Module):
 # linear feed-foward model with sigmoid activation functions
 class LinNet_v2(nn.Module):  
     def __init__(self, D_in, H1, H2, H3, D_out, xmin, xmax):
-        super(LinNet, self).__init__()
+        super(LinNet_v2, self).__init__()
 
         self.xmin = xmin
         self.xmax = xmax
