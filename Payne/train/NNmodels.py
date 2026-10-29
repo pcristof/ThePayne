@@ -38,6 +38,8 @@ def defmod(D_in,H1,H2,H3,D_out,xmin,xmax,NNtype='SMLP'):
         return ResNet(D_in,H1,H2,H3,D_out,xmin,xmax)
     elif NNtype == 'LinNet':
         return LinNet(D_in,H1,H2,H3,D_out,xmin,xmax)
+    elif NNtype == 'LinNet_v2':
+        return LinNet_v2(D_in,H1,H2,H3,D_out,xmin,xmax)
     else:
         return SMLP(D_in,H1,H2,H3,D_out,xmin,xmax)
 
@@ -62,6 +64,13 @@ def readNN(nnpath,NNtype='SMLP'):
         H3    = nnh5['model/lin5.weight'].shape[0]
         D_out = nnh5['model/lin6.weight'].shape[0]
     
+    if (NNtype == 'LinNet_v2'):
+        D_in  = nnh5['model/lin1.weight'].shape[1]
+        H1    = nnh5['model/lin1.weight'].shape[0]
+        H2    = nnh5['model/lin2.weight'].shape[0]
+        H3    = nnh5['model/lin3.weight'].shape[0]
+        D_out = nnh5['model/lino.weight'].shape[0]
+
     if NNtype == 'ResNet':
         D_in      = nnh5['model/ConvTranspose1d.weight'].shape[1]
         H1        = nnh5['model/lin1.weight'].shape[0]
@@ -159,6 +168,34 @@ class LinNet(nn.Module):
         out4 = torch.sigmoid(self.lin4(out3))
         out5 = torch.sigmoid(self.lin5(out4))
         y_i = self.lin6(out5)
+        return y_i     
+
+    def encode(self,x):
+        # convert x into numpy to do math
+        x_np = x.data.cpu().numpy()
+        xout = (x_np-self.xmin)/(self.xmax-self.xmin) - 0.5
+        return Variable(torch.from_numpy(xout).type(dtype))
+
+
+# linear feed-foward model with sigmoid activation functions
+class LinNet_v2(nn.Module):  
+    def __init__(self, D_in, H1, H2, H3, D_out, xmin, xmax):
+        super(LinNet, self).__init__()
+
+        self.xmin = xmin
+        self.xmax = xmax
+
+        self.lin1 = nn.Linear(D_in,H1)
+        self.lin2 = nn.Linear(H1,H2)
+        self.lin3 = nn.Linear(H2,H3)
+        self.lino = nn.Linear(H3, D_out)
+
+    def forward(self, x):
+        x_i = self.encode(x)
+        out1 = torch.sigmoid(self.lin1(x_i))
+        out2 = torch.sigmoid(self.lin2(out1))
+        out3 = torch.sigmoid(self.lin3(out2))
+        y_i = self.lino(out3)
         return y_i     
 
     def encode(self,x):

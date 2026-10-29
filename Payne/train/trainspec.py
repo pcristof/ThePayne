@@ -59,6 +59,8 @@ def defmod(D_in,H1,H2,H3,D_out,xmin,xmax,NNtype='SMLP'):
           return NNmodels.ResNet(D_in,H1,H2,D_out,xmin,xmax)
      elif NNtype == 'LinNet':
           return NNmodels.LinNet(D_in,H1,H2,H3,D_out,xmin,xmax)
+     elif NNtype == 'LinNet_v2':
+          return NNmodels.LinNet_v2(D_in,H1,H2,H3,D_out,xmin,xmax)
      else:
           return NNmodels.SMLP(D_in,H1,H2,H3,D_out,xmin,xmax)
 
@@ -353,14 +355,18 @@ class TrainMod(object):
 
           #      return (weights * residual**2).mean()
 
-          def loss_fn_spectra(pred, target, epsilon=0.005, floor=1e-3, power=2., T=None):
+          def loss_fn_spectra(pred, target, epsilon=0.0005, floor=1e-3, power=2., T=None):
                '''Loss so that differences smaller than 1% do *not* pernalize contibute to the loss
                while the rest increases with increasing loss.
                In practice epsilon acts as a limit after which we stop trying to optimize. 
                If we reach a precision of epsilon, we simply do not try to do better.  
                   '''
-               relative_error = torch.abs(pred - target) / torch.clamp(torch.abs(target), min=floor)
-               excess = torch.relu(relative_error - epsilon)
+               # relative_error = torch.abs(pred - target) / torch.clamp(torch.abs(target), min=floor)
+               # excess = torch.relu(relative_error - epsilon)
+               excess = (
+                    torch.log(torch.clamp(pred, min=1e-8)) 
+                    - torch.log(torch.clamp(target, min=1e-8))
+                    )
                return torch.mean(excess**power)
 
           def loss_fn_continua(pred, target, epsilon=0.005, floor=1e-3, power=2., T=None):
@@ -412,7 +418,7 @@ class TrainMod(object):
           #     [p for p in model.parameters() if p.requires_grad==True], lr=learning_rate)
 
           # initialize the scheduler to adjust the learning rate
-          scheduler = StepLR(optimizer,10,gamma=0.50)
+          scheduler = StepLR(optimizer,2,gamma=0.50)
           # scheduler = ReduceLROnPlateau(optimizer,mode='min',factor=0.1)
           # scheduler = ExponentialLR(optimizer,100,gamma=0.90)
 
@@ -582,7 +588,11 @@ class TrainMod(object):
                               except:
                                    from IPython import embed;embed()
                               if self.logplot:
-                                   residual = torch.abs(Y_pred_valid_Tensor-Y_valid_Tensor[idx])
+                                   if self.c3kmods.isPCA:
+                                        residual = torch.abs(Y_pred_valid_spec - Y_true_valid_spec)
+                                   else:
+                                        residual = torch.abs(Y_pred_valid_Tensor - Y_valid_Tensor[idx])
+                                   # residual = torch.abs(Y_pred_valid_Tensor-Y_valid_Tensor[idx])
                                    medres_i,maxres_i = float(residual.median()),float(residual.max())
                                    if medres_i > medres:
                                         medres = medres_i
