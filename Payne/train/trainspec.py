@@ -355,18 +355,18 @@ class TrainMod(object):
 
           #      return (weights * residual**2).mean()
 
-          def loss_fn_spectra(pred, target, epsilon=0.0005, floor=1e-3, power=2., T=None):
+          def loss_fn_spectra(pred, target, epsilon=0.00001, floor=0.02, power=2., T=None):
                '''Loss so that differences smaller than 1% do *not* pernalize contibute to the loss
                while the rest increases with increasing loss.
                In practice epsilon acts as a limit after which we stop trying to optimize. 
                If we reach a precision of epsilon, we simply do not try to do better.  
                   '''
-               # relative_error = torch.abs(pred - target) / torch.clamp(torch.abs(target), min=floor)
-               # excess = torch.relu(relative_error - epsilon)
-               excess = (
-                    torch.log(torch.clamp(pred, min=1e-8)) 
-                    - torch.log(torch.clamp(target, min=1e-8))
-                    )
+               relative_error = torch.abs(pred - target) / torch.clamp(torch.abs(target), min=floor)
+               excess = torch.relu(relative_error - epsilon)
+               # excess = (
+               #      torch.log(torch.clamp(pred, min=1e-8)) 
+               #      - torch.log(torch.clamp(target, min=1e-8))
+               #      )
                return torch.mean(excess**power)
 
           def loss_fn_continua(pred, target, epsilon=0.005, floor=1e-3, power=2., T=None):
