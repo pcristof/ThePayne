@@ -131,7 +131,7 @@ class TrainMod(object):
                self.resolution = None
 
           self.waverange  = kwargs.get('waverange',[5150.0,5300.0])
-          self.spectrumMode  = kwargs.get('spectrumMode',[5150.0,5300.0])
+          self.spectrumMode  = kwargs.get('spectrumMode', 'spec')
 
           # check for user defined ranges for atm models
           self.teffrange  = kwargs.get('teff',None)
@@ -355,21 +355,43 @@ class TrainMod(object):
 
           #      return (weights * residual**2).mean()
 
-          def loss_fn_spectra(pred, target, epsilon=0.00001, floor=0.02, power=2., T=None):
+          # def loss_fn_spectra__(pred, target, epsilon=0.005, floor=0.005, power=2., T=None):
+          #      '''Loss so that differences smaller than 1% do *not* pernalize contibute to the loss
+          #      while the rest increases with increasing loss.
+          #      In practice epsilon acts as a limit after which we stop trying to optimize. 
+          #      If we reach a precision of epsilon, we simply do not try to do better.  
+          #         '''
+          #      relative_error = torch.abs(pred - target) / torch.clamp(torch.abs(target), min=floor)
+          #      # excess = torch.relu(relative_error - epsilon)
+          #      bad = (relative_error > epsilon).float()
+          #      good = 1.0 - bad
+          #      err_p = relative_error**power
+          #      loss_good = (err_p * good).sum() / good.sum().clamp(min=1)
+          #      loss_bad  = (err_p * bad).sum()  / bad.sum().clamp(min=1)
+          #      return  loss_good + loss_bad
+
+          #      # excess = (
+          #      #      torch.log(torch.clamp(pred, min=1e-8)) 
+          #      #      - torch.log(torch.clamp(target, min=1e-8))
+          #      #      )
+          #      # return torch.mean(excess**power)
+
+
+          loss_floor = 0.005
+
+          def loss_fn_spectra(pred, target, epsilon=0.005, floor=loss_floor, power=2., T=None, w=None):
                '''Loss so that differences smaller than 1% do *not* pernalize contibute to the loss
                while the rest increases with increasing loss.
                In practice epsilon acts as a limit after which we stop trying to optimize. 
                If we reach a precision of epsilon, we simply do not try to do better.  
                   '''
                relative_error = torch.abs(pred - target) / torch.clamp(torch.abs(target), min=floor)
-               excess = torch.relu(relative_error - epsilon)
-               # excess = (
-               #      torch.log(torch.clamp(pred, min=1e-8)) 
-               #      - torch.log(torch.clamp(target, min=1e-8))
-               #      )
-               return torch.mean(excess**power)
+               excess = torch.relu(relative_error - epsilon)**power
+               if w is not None:
+                    excess = excess * w            # w has shape (Npix,), broadcast over spectra
+               return torch.mean(excess)
 
-          def loss_fn_continua(pred, target, epsilon=0.005, floor=1e-3, power=2., T=None):
+          def loss_fn_continua(pred, target, epsilon=0.005, floor=1e-3, power=2., T=None, w=None):
                '''Loss so that differences smaller than 1% do *not* pernalize contibute to the loss
                while the rest increases with increasing loss.
                In practice epsilon acts as a limit after which we stop trying to optimize. 
@@ -407,6 +429,9 @@ class TrainMod(object):
           # loss_fn = torch.nn.SmoothL1Loss(reduction='mean')
           # loss_fn = torch.nn.KLDivLoss(size_average=False)
           # loss_fn = torch.nn.L1Loss(reduction = 'sum')
+
+          ## Trying to weight accross passes
+          w_pix = None          # per-pixel weights, created at the first validation pass
 
           # initialize the optimizer
           learning_rate = self.lr
@@ -536,9 +561,9 @@ class TrainMod(object):
                               if self.c3kmods.isPCA:
                                    Y_pred_train_spec = Y_pred_train_Tensor @ pca_components_Tensor + pca_mean_Tensor
                                    Y_true_train_spec = Y_train_Tensor[idx] @ pca_components_Tensor + pca_mean_Tensor
-                                   loss = loss_fn(Y_pred_train_spec, Y_true_train_spec, T=T)
+                                   loss = loss_fn(Y_pred_train_spec, Y_true_train_spec, T=T,  w=w_pix)
                               else:
-                                   loss = loss_fn(Y_pred_train_Tensor, Y_train_Tensor[idx], T=T)
+                                   loss = loss_fn(Y_pred_train_Tensor, Y_train_Tensor[idx], T=T,  w=w_pix)
 
                               # Backward pass: compute gradient of the loss with respect to model parameters
                               optimizer.zero_grad()
@@ -571,6 +596,7 @@ class TrainMod(object):
                          loss_valid = 0
                          medres = 0
                          maxres = -np.inf
+                         m = None                                   # before the loop over j
                          for j in range(nbatches_valid):
                               ## PIC: Is there a mistake here? Should we replace the following:
                               # idx = perm[t * self.batchsize : (t+1) * self.batchsize]
@@ -598,6 +624,19 @@ class TrainMod(object):
                                         medres = medres_i
                                    if maxres_i > maxres:
                                         maxres = maxres_i
+
+                              with torch.no_grad():
+                                   p, t = (Y_pred_valid_spec, Y_true_valid_spec) if self.c3kmods.isPCA \
+                                        else (Y_pred_valid_Tensor, Y_valid_Tensor[idx])
+                                   r = torch.abs(p - t) / (0.01 * torch.clamp(torch.abs(t), min=loss_floor))
+                                   m_j = r.amax(dim=0)                   # worst error at each pixel, in units of 1%
+                                   m = m_j if m is None else torch.maximum(m, m_j)
+                              
+                         # after the loop over j:
+                         if w_pix is None:
+                              w_pix = torch.ones_like(m)
+                         w_pix *= torch.exp(0.5 * (m - 1.0).clamp(-1.0, 1.0))   # at most ×1.65 or ÷1.65 per update        # failing pixels up, passing pixels down
+                         w_pix = (w_pix / w_pix.mean()).clamp(0.1, 100.0)
 
                          ## --------------------------------
                          ## PIC: For debugging only:
