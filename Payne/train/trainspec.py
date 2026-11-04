@@ -377,7 +377,9 @@ class TrainMod(object):
           #      # return torch.mean(excess**power)
 
 
+
           loss_floor = 0.005
+          DAMPING = 1
 
           def loss_fn_spectra(pred, target, epsilon=0.005, floor=loss_floor, power=2., T=None, w=None):
                '''Loss so that differences smaller than 1% do *not* pernalize contibute to the loss
@@ -389,7 +391,7 @@ class TrainMod(object):
                excess = torch.relu(relative_error - epsilon)**power
                if w is not None:
                     excess = excess * w            # w has shape (Npix,), broadcast over spectra
-               return torch.mean(excess)
+               return torch.mean(excess)*DAMPING
 
           def loss_fn_continua(pred, target, epsilon=0.005, floor=1e-3, power=2., T=None, w=None):
                '''Loss so that differences smaller than 1% do *not* pernalize contibute to the loss
@@ -533,6 +535,10 @@ class TrainMod(object):
                Y_valid_Tensor = Variable(torch.from_numpy(Y_valid).type(dtype), requires_grad=False)
                Y_valid_Tensor = Y_valid_Tensor.to(device)               
 
+
+               c_mean_T = torch.as_tensor(self.c3kmods.mean_standard, dtype=torch.float32, device=device)
+               c_std_T  = torch.as_tensor(self.c3kmods.std_standard,  dtype=torch.float32, device=device)
+
                pca_components_Tensor = torch.from_numpy(self.c3kmods.pca_basis).type(dtype).to(device)
                pca_mean_Tensor = torch.from_numpy(self.c3kmods.pca_mean_spectrum).type(dtype).to(device)
 
@@ -559,8 +565,8 @@ class TrainMod(object):
 
                               # Compute and print loss.
                               if self.c3kmods.isPCA:
-                                   Y_pred_train_spec = Y_pred_train_Tensor @ pca_components_Tensor + pca_mean_Tensor
-                                   Y_true_train_spec = Y_train_Tensor[idx] @ pca_components_Tensor + pca_mean_Tensor
+                                   Y_pred_train_spec = (Y_pred_train_Tensor * c_std_T + c_mean_T) @ pca_components_Tensor + pca_mean_Tensor
+                                   Y_true_train_spec = (Y_train_Tensor[idx] * c_std_T + c_mean_T) @ pca_components_Tensor + pca_mean_Tensor
                                    loss = loss_fn(Y_pred_train_spec, Y_true_train_spec, T=T,  w=w_pix)
                               else:
                                    loss = loss_fn(Y_pred_train_Tensor, Y_train_Tensor[idx], T=T,  w=w_pix)
@@ -606,8 +612,8 @@ class TrainMod(object):
                               try:
                                    Y_pred_valid_Tensor = model(X_valid_Tensor[idx]) 
                                    if self.c3kmods.isPCA:
-                                        Y_pred_valid_spec = Y_pred_valid_Tensor @ pca_components_Tensor + pca_mean_Tensor
-                                        Y_true_valid_spec = Y_valid_Tensor[idx] @ pca_components_Tensor + pca_mean_Tensor
+                                        Y_pred_valid_spec = (Y_pred_valid_Tensor * c_std_T + c_mean_T) @ pca_components_Tensor + pca_mean_Tensor
+                                        Y_true_valid_spec = (Y_valid_Tensor[idx] * c_std_T + c_mean_T) @ pca_components_Tensor + pca_mean_Tensor
                                         loss_valid += loss_fn(Y_pred_valid_spec, Y_true_valid_spec, T=T)
                                    else:
                                         loss_valid += loss_fn(Y_pred_valid_Tensor, Y_valid_Tensor[idx], T=T)
@@ -632,11 +638,11 @@ class TrainMod(object):
                                    m_j = r.amax(dim=0)                   # worst error at each pixel, in units of 1%
                                    m = m_j if m is None else torch.maximum(m, m_j)
                               
-                         # after the loop over j:
-                         if w_pix is None:
-                              w_pix = torch.ones_like(m)
-                         w_pix *= torch.exp(0.5 * (m - 1.0).clamp(-1.0, 1.0))   # at most ×1.65 or ÷1.65 per update        # failing pixels up, passing pixels down
-                         w_pix = (w_pix / w_pix.mean()).clamp(0.1, 100.0)
+                         # # after the loop over j:
+                         # if w_pix is None:
+                         #      w_pix = torch.ones_like(m)
+                         # w_pix *= torch.exp(0.5 * (m - 1.0).clamp(-1.0, 1.0))   # at most ×1.65 or ÷1.65 per update        # failing pixels up, passing pixels down
+                         # w_pix = (w_pix / w_pix.mean()).clamp(0.1, 100.0)
 
                          ## --------------------------------
                          ## PIC: For debugging only:
@@ -712,6 +718,10 @@ class TrainMod(object):
                               pass
                          if 'normFactor' not in outfile_i:
                               outfile_i.create_dataset('normFactor',data=self.c3kmods.normFactor)
+                         if 'std_standard' not in outfile_i:
+                              outfile_i.create_dataset('std_standard',data=self.c3kmods.std_standard)
+                         if 'mean_standard' not in outfile_i:
+                              outfile_i.create_dataset('mean_standard',data=self.c3kmods.mean_standard)
                          outfile_i.create_dataset(
                               'model/{0}'.format(kk),
                               data=model.state_dict()[kk].cpu().numpy(),

@@ -37,7 +37,7 @@ class readc3k(object):
         ## What I really want to to have a list of labels
         self.PARAMETERS = []
         ## And for each labels I will create an array of values.
-        
+        self.standardized = False
         ## I am also deleting everything that is related to weights, because
         ## I do not understand what they are doing here (I am assuming these
         ## were to help choose the spectra to pick).
@@ -300,6 +300,17 @@ class readc3k(object):
         self.std_standard = 1.0
         self.normFactor = normFactor
 
+        if isPCA:
+            if not self.standardized:          # first call only: fixed for the whole run\
+                self.standardized = True
+                all_c = np.concatenate([d[()] for d in spectra_datasets], axis=0)
+                self.mean_standard = np.nanmean(all_c, axis=0)
+                std = np.nanstd(all_c, axis=0)
+                self.std_standard = np.maximum(std, 1e-6 * std.max())   # guard near-zero components
+        else:
+            self.mean_standard = 0.0
+            self.std_standard = 1.0
+
         self.spectrumMode = spectrumMode
         self.chebychev_T = T
         
@@ -490,7 +501,8 @@ class readc3k(object):
             # 	print('Convolve C3K to new R in {0}'.format(datetime.now()-starttime))
 
             labels.append(label_i)
-            spectra.append(spectra_i/self.normFactor)
+            # spectra.append(spectra_i/self.normFactor)
+            spectra.append((spectra_i/self.normFactor - self.mean_standard)/self.std_standard)
             # spectra.append((spectra_i-self.mean_standard)/self.std_standard)
 
             # if requested, return continuua
