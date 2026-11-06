@@ -310,7 +310,23 @@ class readc3k(object):
         # list_of_params_index = list(np.arange(len(list_all_spectra)))
         offsets = np.cumsum([0] + lengths)
         total_spectra = offsets[-1]
-        list_of_params_index = list(range(total_spectra))
+        # list_of_params_index = list(range(total_spectra))
+
+        if not hasattr(self, '_cache'):
+            self._cache = {}
+        if spectrumMode not in self._cache:
+            P = np.concatenate([d[()] for d in params_datasets])                     # all labels
+            S = np.concatenate([d[()] for d in spectra_datasets]).astype(np.float32)  # all coefficients
+            self._cache[spectrumMode] = (P, S)
+        P_all, S_all = self._cache[spectrumMode]
+
+        # labels of every model, in global index order
+        all_labels = [tuple(map(float, row)) for d in params_datasets for row in d[()].tolist()]
+        allowed = np.array([i for i, lab in enumerate(all_labels) if lab not in excludelabels])
+        if len(allowed) < num:
+            raise RuntimeError(f'Only {len(allowed)} spectra left after exclusion, {num} requested')
+        order = self.rng.permutation(allowed)
+        pos = 0
 
         ## Dummy variables for now.
         # self.mean_standard = 0.0
@@ -382,18 +398,30 @@ class readc3k(object):
                 starttime = datetime.now()
 
             ## Pick a random set of parameters
-            index = self.rng.choice(list_of_params_index)
-            list_of_params_index.remove(index) ## Remove element from the list
-            indices.append(index) ## The indices we've called
+            # index = self.rng.choice(list_of_params_index)
+            # list_of_params_index.remove(index) ## Remove element from the list
+            # indices.append(index) ## The indices we've called
+
+            if pos >= len(order):
+                raise RuntimeError(f'Ran out of spectra: found {ii} of {num}')
+            index = order[pos]
+            pos += 1
+
             # params = list_of_params[index] ## The parameters associated
             # label_i = list(params)
             # spectra_i = list_all_spectra[index] ## The spectrum associated
-            file_idx = np.searchsorted(offsets[1:], index, side='right')
-            row_idx = index - offsets[file_idx]
 
-            params = params_datasets[file_idx][row_idx]
+            # file_idx = np.searchsorted(offsets[1:], index, side='right')
+            # row_idx = index - offsets[file_idx]
+
+
+            params = P_all[index]
+            spectra_i = S_all[index]
             label_i = list(params)
-            spectra_i = spectra_datasets[file_idx][row_idx]
+            
+            # params = params_datasets[file_idx][row_idx]
+            # label_i = list(params)
+            # spectra_i = spectra_datasets[file_idx][row_idx]
 
             # check to see if user defined labels to exclude, if so
             # continue on to the next iteration
