@@ -108,6 +108,7 @@ class readc3k(object):
             i+=1
         
         print(f'Found {ntot} models')
+        self.ntot_models = ntot
 
         self.paramkey = paramkey        
 
@@ -212,7 +213,20 @@ class readc3k(object):
             fwhm = 0.
 
         if 'excludelabels' in kwargs:
-            excludelabels = kwargs['excludelabels'].T.tolist()
+            ## PIC: I had a .T before to transpose the labels passed.
+            ## It's likely a question of convention, but this can mess
+            ## up everything !
+            ## Maybe check the direction?
+            excludelabels = kwargs['excludelabels']#.tolist()
+            if excludelabels.shape[0]==len(self.PARAMETERS) \
+                    and excludelabels.shape[1] != len(self.PARAMETERS):
+                excludelabels = excludelabels.T
+            elif excludelabels.shape[0]==len(self.PARAMETERS) \
+                    and excludelabels.shape[1] == len(self.PARAMETERS):
+                print('WARNING - number of parameters equal to number of exluded spectra')
+                print('Potential for error')
+            ## Make it a set of tuples
+            excludelabels = set(map(tuple, excludelabels.tolist()))
         else:
             excludelabels = []
 
@@ -380,7 +394,9 @@ class readc3k(object):
 
             # check to see if user defined labels to exclude, if so
             # continue on to the next iteration
-            if label_i in excludelabels:
+            # if label_i in excludelabels:
+            ## Checking with tuples would be faster than in a list?
+            if tuple(map(float, label_i)) in excludelabels:
                 print('Found spectrum in exclude labels')
                 continue
             

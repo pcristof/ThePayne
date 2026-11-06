@@ -175,6 +175,9 @@ class TrainMod(object):
           print('    mist: {0}'.format(self.mistpath))
           sys.stdout.flush()
 
+          self.optimizer_step = kwargs.get('optimizer_step', 2)
+          self.optimizer_gamma = kwargs.get('optimizer_gamma', 0.5)
+
           # self.c3kmods = readc3k(MISTpath=self.mistpath,C3Kpath=self.c3kpath,vtfixed=vtfixed,verbose=False)
           
           from ..utils.readflex import readc3k as readc3k
@@ -445,7 +448,7 @@ class TrainMod(object):
           #     [p for p in model.parameters() if p.requires_grad==True], lr=learning_rate)
 
           # initialize the scheduler to adjust the learning rate
-          scheduler = StepLR(optimizer,2,gamma=0.50)
+          scheduler = StepLR(optimizer,self.optimizer_step,gamma=self.optimizer_gamma)
           # scheduler = ReduceLROnPlateau(optimizer,mode='min',factor=0.1)
           # scheduler = ExponentialLR(optimizer,100,gamma=0.90)
 
