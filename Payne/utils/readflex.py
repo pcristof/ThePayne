@@ -397,7 +397,7 @@ class readc3k(object):
             # if label_i in excludelabels:
             ## Checking with tuples would be faster than in a list?
             if tuple(map(float, label_i)) in excludelabels:
-                print('Found spectrum in exclude labels')
+                # print('Found spectrum in exclude labels')
                 continue
             
             ## Here I have removed the option to divide by conitnuum.
