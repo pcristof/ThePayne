@@ -390,8 +390,8 @@ class TrainMod(object):
                In practice epsilon acts as a limit after which we stop trying to optimize. 
                If we reach a precision of epsilon, we simply do not try to do better.  
                   '''
-               relative_error = torch.abs(pred - target) / torch.clamp(torch.abs(target), min=floor)
-               excess = torch.relu(relative_error - epsilon)**power
+               relative_error = torch.abs(pred - target) #/ torch.clamp(torch.abs(target), min=floor)
+               excess = relateive_error #torch.relu(relative_error - epsilon)**power
                if w is not None:
                     excess = excess * w            # w has shape (Npix,), broadcast over spectra
                return torch.mean(excess)*DAMPING
