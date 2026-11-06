@@ -136,6 +136,9 @@ class readc3k(object):
         self.rng = np.random.default_rng()
         self.mean_standard = None
 
+        self.mean_standard = 0.0
+        self.std_standard = 1.0
+
     def pullspectra(self,num,**kwargs):
         '''
         Randomly draw num spectra from C3K with option to 
@@ -310,20 +313,20 @@ class readc3k(object):
         list_of_params_index = list(range(total_spectra))
 
         ## Dummy variables for now.
-        self.mean_standard = 0.0
-        self.std_standard = 1.0
+        # self.mean_standard = 0.0
+        # self.std_standard = 1.0
         self.normFactor = normFactor
 
-        if isPCA:
-            if not self.standardized:          # first call only: fixed for the whole run\
-                self.standardized = True
-                all_c = np.concatenate([d[()] for d in spectra_datasets], axis=0)
-                self.mean_standard = np.nanmean(all_c, axis=0)
-                std = np.nanstd(all_c, axis=0)
-                self.std_standard = np.maximum(std, 1e-6 * std.max())   # guard near-zero components
-        else:
-            self.mean_standard = 0.0
-            self.std_standard = 1.0
+        # if isPCA:
+        #     if not self.standardized:          # first call only: fixed for the whole run\
+        #         self.standardized = True
+        #         all_c = np.concatenate([d[()] for d in spectra_datasets], axis=0)
+        #         self.mean_standard = np.nanmean(all_c, axis=0)
+        #         std = np.nanstd(all_c, axis=0)
+        #         self.std_standard = np.maximum(std, 1e-6 * std.max())   # guard near-zero components
+        # else:
+        #     self.mean_standard = 0.0
+        #     self.std_standard = 1.0
 
         self.spectrumMode = spectrumMode
         self.chebychev_T = T
