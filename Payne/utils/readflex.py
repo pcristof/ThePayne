@@ -242,6 +242,7 @@ class readc3k(object):
         reclabelsel   = kwargs.get('reclabelsel',False)
         continuuabool = kwargs.get('returncontinuua',False)
         spectrumMode = kwargs.get('spectrumMode','spectra')
+        STANDARDIZE = kwargs.get('standardize', False)
         isPCA = False
         if spectrumMode=='pca':
             spectrumMode='coeffs'
@@ -333,13 +334,14 @@ class readc3k(object):
         # self.std_standard = 1.0
         self.normFactor = normFactor
 
-        # if isPCA:
-        #     if not self.standardized:          # first call only: fixed for the whole run\
-        #         self.standardized = True
-        #         all_c = np.concatenate([d[()] for d in spectra_datasets], axis=0)
-        #         self.mean_standard = np.nanmean(all_c, axis=0)
-        #         std = np.nanstd(all_c, axis=0)
-        #         self.std_standard = np.maximum(std, 1e-6 * std.max())   # guard near-zero components
+        if isPCA:
+            if STANDARDIZE:
+                if not self.standardized:          # first call only: fixed for the whole run\
+                    self.standardized = True
+                    all_c = np.concatenate([d[()] for d in spectra_datasets], axis=0)
+                    self.mean_standard = np.nanmean(all_c, axis=0)
+                    std = np.nanstd(all_c, axis=0)
+                    self.std_standard = np.maximum(std, 1e-6 * std.max())   # guard near-zero components
         # else:
         #     self.mean_standard = 0.0
         #     self.std_standard = 1.0

@@ -98,6 +98,7 @@ class TrainMod(object):
           ## Can be spectra or continuua
           ## I am trying to keep them consistent with the keys in the files
           self.spectrumMode = kwargs.get('spectrumMode','spectra')
+          self.STANDARDIZE = kwargs.get('standardize', False)
 
           # number of neurons in each layer
           if 'H1' in kwargs:
@@ -197,7 +198,8 @@ class TrainMod(object):
                logg=self.loggrange,
                FeH=self.fehrange,
                aFe=self.aferange,
-               vtrub=self.vtrange)
+               vtrub=self.vtrange,
+               standardize=self.STANDARDIZE)
 
           # ## ##########################################
           # ## PIC DEBUGGING
@@ -390,8 +392,9 @@ class TrainMod(object):
                In practice epsilon acts as a limit after which we stop trying to optimize. 
                If we reach a precision of epsilon, we simply do not try to do better.  
                   '''
-               relative_error = torch.abs(pred - target) #/ torch.clamp(torch.abs(target), min=floor)
-               excess = relative_error #torch.relu(relative_error - epsilon)**power
+               relative_error = torch.abs(pred - target) / torch.clamp(torch.abs(target), min=floor)
+               excess = relative_error #torch.relu(relative_error - epsilon) # **power
+               excess = excess**power
                if w is not None:
                     excess = excess * w            # w has shape (Npix,), broadcast over spectra
                return torch.mean(excess)*DAMPING
@@ -500,6 +503,7 @@ class TrainMod(object):
                          aFe=self.aferange,
                          vtrub=self.vtrange,
                          excludelabels=np.array(self.testlabels),
+                         standardize=self.STANDARDIZE,
                          )
                
                # create tensor for input training labels
@@ -524,7 +528,8 @@ class TrainMod(object):
                     FeH=self.fehrange,
                     aFe=self.aferange,
                     vtrub=self.vtrange,
-                    excludelabels=np.array(list(self.testlabels)+list(X_train_labels)),)
+                    excludelabels=np.array(list(self.testlabels)+list(X_train_labels)),
+                    standardize=self.STANDARDIZE)
 
                self.wave = wavelength_valid
 
